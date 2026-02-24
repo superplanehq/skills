@@ -5,13 +5,13 @@ Agent skills for operating [SuperPlane](https://github.com/superplanehq/superpla
 ## Install
 
 ```bash
-npx skills add superplanehq/superplane-skills
+npx skills add superplanehq/skills
 ```
 
 Or install a specific skill:
 
 ```bash
-npx skills add superplanehq/superplane-skills --skill superplane-cli
+npx skills add superplanehq/skills --skill superplane-cli
 ```
 
 ## Skills
