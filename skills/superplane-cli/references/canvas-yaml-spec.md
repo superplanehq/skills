@@ -11,8 +11,8 @@ metadata:
   id: <uuid>           # assigned on create, required for update
   name: My Canvas
 spec:
-  edges: [...]
   nodes: [...]
+  edges: [...]
 ```
 
 ## Nodes
@@ -20,56 +20,92 @@ spec:
 ### Trigger Node
 
 ```yaml
-- id: schedule-trigger-abc
-  name: every-5-minutes
+- id: trigger-main
+  name: github.onPush
   type: TYPE_TRIGGER
   trigger:
-    name: schedule
-  paused: false
-  position: { x: 144, y: 0 }
+    name: github.onPush
+  integration:
+    id: <github-integration-id>
+    name: ""
   configuration:
-    type: minutes
-    minutesInterval: 5
+    repository: owner/repo
+    refs:
+      - type: equals
+        value: refs/heads/main
+  position:
+    x: 120
+    y: 100
+  paused: false
+  isCollapsed: false
 ```
 
 ### Component Node
 
 ```yaml
-- id: http-check-xyz
-  name: health-check
+- id: component-ci
+  name: semaphore.runWorkflow
   type: TYPE_COMPONENT
   component:
-    name: http
-  paused: false
-  position: { x: 624, y: 0 }
+    name: semaphore.runWorkflow
+  integration:
+    id: <semaphore-integration-id>
+    name: ""
   configuration:
-    method: GET
-    url: "https://api.example.com/health"
+    project: <project-id>
+    pipelineFile: .semaphore/semaphore.yml
+    ref: refs/heads/main
+  position:
+    x: 600
+    y: 100
+  paused: false
+  isCollapsed: false
+```
+
+### Built-in Component (no integration)
+
+```yaml
+- id: approval-gate
+  name: approval
+  type: TYPE_COMPONENT
+  component:
+    name: approval
+  configuration: {}
+  position:
+    x: 1080
+    y: 100
+  paused: false
+  isCollapsed: false
 ```
 
 ### Node Fields
 
 | Field | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Unique ID (convention: `<type>-<name>-<random>`) |
-| `name` | Yes | Display name |
+| `id` | Yes | Unique ID within the canvas |
+| `name` | Yes | Display name — keep unique to avoid warnings |
 | `type` | Yes | `TYPE_TRIGGER` or `TYPE_COMPONENT` |
-| `trigger.name` | Triggers | Trigger type from the index |
-| `component.name` | Components | Component type from the index |
+| `trigger.name` | Triggers | Trigger type (e.g. `github.onPush`) |
+| `component.name` | Components | Component type (e.g. `semaphore.runWorkflow`) |
+| `integration.id` | Integration nodes | Connected integration instance ID |
+| `integration.name` | No | Can be empty string |
 | `paused` | No | Disable without removing (default: `false`) |
+| `isCollapsed` | No | Collapse in UI (default: `false`) |
 | `position.x`, `position.y` | Yes | Canvas UI position |
 | `configuration` | Yes | Type-specific config |
+| `errorMessage` | Read-only | Server-set validation error |
+| `warningMessage` | Read-only | Server-set warning (e.g. duplicate names) |
 
 ### Positioning
 
-Downstream nodes go 480px right: `x = upstream.x + 480`. Parallel branches use different `y` values (offset 120).
+Downstream nodes go ~480px right. Parallel branches use different `y` values.
 
 ## Edges
 
 ```yaml
 edges:
-  - sourceId: trigger-id
-    targetId: component-id
+  - sourceId: trigger-main
+    targetId: component-ci
     channel: default
 ```
 
@@ -81,6 +117,14 @@ edges:
 | If | `True`, `False` |
 | Approval | `approved`, `rejected` |
 | Everything else | `default` |
+
+Typical gated flow:
+
+```
+Trigger → CI component
+CI (passed) → Approval
+Approval (approved) → Deploy component
+```
 
 ## Expressions
 
@@ -99,29 +143,64 @@ url: "https://api.example.com/repos/{{ $['GitHub Push'].repository.full_name }}"
 
 ## Complete Example
 
+GitHub push triggers Semaphore CI, then requires approval before deploy:
+
 ```yaml
 apiVersion: v1
 kind: Canvas
 metadata:
-  name: Health Check
+  id: <canvas-id>
+  name: Deploy Pipeline
 spec:
-  edges:
-    - sourceId: sched-t1
-      targetId: http-a1
-      channel: default
   nodes:
-    - id: sched-t1
-      name: every-minute
+    - id: trigger-main
+      name: github.onPush
       type: TYPE_TRIGGER
-      trigger: { name: schedule }
+      trigger:
+        name: github.onPush
+      integration:
+        id: <github-integration-id>
+        name: ""
+      configuration:
+        repository: myorg/myapp
+        refs:
+          - type: equals
+            value: refs/heads/main
+      position: { x: 120, y: 100 }
       paused: false
-      position: { x: 144, y: 0 }
-      configuration: { type: minutes, minutesInterval: 1 }
-    - id: http-a1
-      name: ping-api
+      isCollapsed: false
+
+    - id: component-ci
+      name: semaphore.runWorkflow
       type: TYPE_COMPONENT
-      component: { name: http }
+      component:
+        name: semaphore.runWorkflow
+      integration:
+        id: <semaphore-integration-id>
+        name: ""
+      configuration:
+        project: myapp
+        pipelineFile: .semaphore/semaphore.yml
+        ref: "{{ $['github.onPush'].ref }}"
+      position: { x: 600, y: 100 }
       paused: false
-      position: { x: 624, y: 0 }
-      configuration: { method: GET, url: "https://api.example.com/health" }
+      isCollapsed: false
+
+    - id: approval-gate
+      name: approval
+      type: TYPE_COMPONENT
+      component:
+        name: approval
+      configuration: {}
+      position: { x: 1080, y: 100 }
+      paused: false
+      isCollapsed: false
+
+  edges:
+    - sourceId: trigger-main
+      targetId: component-ci
+      channel: default
+    - sourceId: component-ci
+      targetId: approval-gate
+      channel: passed
 ```
