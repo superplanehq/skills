@@ -37,6 +37,20 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | List node executions | `superplane executions list --canvas-id <id> --node-id <nid>` |
 | Cancel execution | `superplane executions cancel --canvas-id <id> --execution-id <eid>` |
 
+## Verify CLI Is Installed
+
+Before any CLI operation, confirm the CLI is available:
+
+```bash
+superplane whoami
+```
+
+If this returns `command not found`, the CLI is **not installed**. Stop and tell the user:
+
+> The SuperPlane CLI is not installed. Install it from https://docs.superplane.com/cli and then re-run this task.
+
+Do **not** attempt to install the CLI on behalf of the user. Do **not** continue with doc-based guesswork when the CLI could be installed. The CLI provides exact trigger names, component names, integration IDs, and config schemas that documentation cannot reliably substitute.
+
 ## Core Workflow
 
 ### 1. Authenticate
@@ -135,15 +149,6 @@ When a field type is `integration-resource` (like `repository` or `project`), th
 4. `superplane integrations list-resources --id <id> --type <type>` — find valid resource values
 5. `superplane canvases update --file canvas.yaml` — apply the fix
 6. `superplane canvases get <name>` — verify errors are cleared
-
-## CLI Installation
-
-```bash
-curl -L https://install.superplane.com/superplane-cli-darwin-arm64 -o superplane
-chmod +x superplane && sudo mv superplane /usr/local/bin/superplane
-```
-
-Binaries: `darwin-arm64`, `darwin-amd64`, `linux-amd64`.
 
 ## When to Use Other Skills
 
