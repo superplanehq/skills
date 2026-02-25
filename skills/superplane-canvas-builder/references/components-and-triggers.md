@@ -37,7 +37,7 @@ Channels: `passed`, `failed`
 | --- | --- | --- |
 | `expression` | Yes | Boolean Expr expression |
 
-Channels: `True`, `False`
+Channels: `true`, `false`
 
 ### Approval (`approval`)
 

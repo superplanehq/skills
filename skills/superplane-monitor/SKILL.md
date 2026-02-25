@@ -55,13 +55,19 @@ Look for:
 - **Pending/Running** — possibly stuck
 - **Skipped** — bypassed by a branch (If/Filter)
 
-### 4. Inspect a Node's History
+### 4. Inspect a Node's History and Payloads
 
 ```bash
-superplane executions list --canvas-id <canvas_id> --node-id <node_id>
+superplane executions list --canvas-id <canvas_id> --node-id <node_id> -o yaml
 ```
 
-Check if failures are recurring.
+Check if failures are recurring. For expression errors, inspect the actual payload structure:
+
+- `rootEvent.data.data` — the trigger's real event payload (the double `.data` is the event envelope wrapping the webhook payload)
+- `input` — what the node received from its upstream node (also has `{ data, timestamp, type }` envelope)
+- `resultMessage` — the exact error, including which expression field was nil
+
+Use these real payloads to fix expression paths rather than guessing from documentation.
 
 ### 5. Fix and Re-run
 

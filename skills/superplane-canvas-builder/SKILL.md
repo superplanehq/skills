@@ -86,7 +86,7 @@ Use the **exact** trigger and component names from step 3 — not guesses from d
 
 - Every component needs at least one incoming edge
 - Triggers have no incoming edges
-- Use named channels for branching (Filter → `passed`/`failed`, If → `True`/`False`)
+- Use named channels for branching (Filter → `passed`/`failed`, If → `true`/`false`)
 - Use Merge to fan-in parallel branches
 
 See [Components & Triggers Reference](references/components-and-triggers.md) for the full list.
@@ -128,13 +128,31 @@ For 3+ branches, keep adding 300 to y for each branch and center the source/merg
 
 ### 6. Configure Expressions
 
+Every node output and `root()` returns an **envelope**: `{ data: {...}, timestamp, type }`. The actual payload fields live under `.data`.
+
 Reference upstream data with Expr language inside `{{ }}`:
 
 | Pattern | Description |
 | --- | --- |
-| `$['Node Name'].field` | Named node's output |
-| `root()` | Trigger event payload |
-| `previous()` | Immediate upstream payload |
+| `$['Node Name'].data.field` | Named node's output field |
+| `root().data.field` | Root trigger event field |
+| `previous().data.field` | Immediate upstream field |
+
+> **Common mistake:** writing `$['Create Sandbox'].id` instead of `$['Create Sandbox'].data.id`. Always include `.data.` to reach the actual payload.
+
+**Verify expressions against real payloads.** The CLI commands `superplane index triggers --name <name>` and `superplane index components --name <name>` only return name/label/description — not payload schemas. After the first run (even a failing one), inspect the actual payload structure:
+
+```bash
+superplane executions list --canvas-id <id> --node-id <nid> -o yaml
+```
+
+Look at:
+- `rootEvent.data.data` — the trigger's actual event payload (note the double `.data`: the event envelope wraps the webhook payload)
+- `input.data` — what the node received from its upstream node
+
+This is the only reliable way to discover field paths for expressions.
+
+**Trigger payloads follow the external system's webhook format.** For example, `github.onPRComment` uses GitHub's `issue_comment` webhook — PR data is under `data.issue.pull_request` (not `data.pull_request`), and that sub-object only contains URLs, not the full PR with `head.ref`. Do not assume payload structure from the trigger name; always inspect a real execution.
 
 ### 7. Apply
 

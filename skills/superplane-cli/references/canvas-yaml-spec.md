@@ -152,7 +152,7 @@ edges:
 | Component | Channels |
 | --- | --- |
 | Filter | `passed`, `failed` |
-| If | `True`, `False` |
+| If | `true`, `false` |
 | Approval | `approved`, `rejected` |
 | Everything else | `default` |
 
@@ -166,18 +166,20 @@ Approval (approved) → Deploy component
 
 ## Expressions
 
-Use [Expr language](https://expr-lang.org) inside `{{ }}`:
+Use [Expr language](https://expr-lang.org) inside `{{ }}`.
+
+Every node output and `root()` returns an **envelope**: `{ data: {...}, timestamp, type }`. Access actual payload fields via `.data`:
 
 ```yaml
-url: "https://api.example.com/repos/{{ $['GitHub Push'].repository.full_name }}"
+url: "https://api.example.com/repos/{{ $['GitHub Push'].data.repository.full_name }}"
 ```
 
 | Pattern | Description |
 | --- | --- |
-| `$['Node Name'].field` | Named node's output |
-| `root()` | Root trigger payload |
-| `previous()` | Immediate upstream payload |
-| `previous(n)` | N levels upstream |
+| `$['Node Name'].data.field` | Named node's output field |
+| `root().data.field` | Root trigger event field |
+| `previous().data.field` | Immediate upstream field |
+| `previous(n).data.field` | N levels upstream |
 
 ## Complete Example
 
@@ -219,7 +221,7 @@ spec:
       configuration:
         project: myapp
         pipelineFile: .semaphore/semaphore.yml
-        ref: "{{ $['github.onPush'].ref }}"
+        ref: "{{ $['github.onPush'].data.ref }}"
       position: { x: 720, y: 100 }
       paused: false
       isCollapsed: false
