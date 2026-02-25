@@ -110,5 +110,4 @@ edges:
 
 ## References
 
-- [Canvas Patterns](references/canvas-patterns.md) — 6 complete real-world canvas YAML examples
 - [Components & Triggers](references/components-and-triggers.md) — All built-in components and trigger types

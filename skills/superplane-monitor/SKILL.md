@@ -99,9 +99,3 @@ Merge waits for ALL incoming edges. If one branch is stuck, filtered out, or fai
 | --- | --- |
 | Create or modify a canvas | superplane-canvas-builder |
 | Run general CLI commands | superplane-cli |
-| Decision-tree troubleshooting | superplane-troubleshoot |
-| Write or fix expressions | superplane-expressions |
-
-## References
-
-- [Error Catalog](references/error-catalog.md) — Known error messages, causes, and resolution steps

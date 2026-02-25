@@ -151,16 +151,6 @@ Binaries: `darwin-arm64`, `darwin-amd64`, `linux-amd64`.
 | --- | --- |
 | Design a canvas from requirements | superplane-canvas-builder |
 | Debug a failed execution | superplane-monitor |
-| Decision-tree troubleshooting | superplane-troubleshoot |
-| Write or fix expressions | superplane-expressions |
-| Connect and configure integrations | superplane-integrations |
-
-## Documentation
-
-For agents that can fetch URLs, the full SuperPlane docs are available in LLM-friendly format:
-
-- Compact index: https://docs.superplane.com/llms.txt
-- Full content: https://docs.superplane.com/llms-full.txt
 
 ## References
 
