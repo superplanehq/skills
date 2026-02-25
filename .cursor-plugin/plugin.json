@@ -1,0 +1,28 @@
+{
+  "name": "superplane",
+  "displayName": "SuperPlane",
+  "version": "0.1.0",
+  "description": "Agent skills for building, debugging, and operating SuperPlane workflow canvases — the open source DevOps control plane for event-driven workflows.",
+  "author": {
+    "name": "SuperPlane",
+    "email": "hello@superplane.com"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "superplane",
+    "devops",
+    "workflows",
+    "canvas",
+    "automation",
+    "ci-cd",
+    "event-driven"
+  ],
+  "skills": [
+    "./skills/superplane-cli",
+    "./skills/superplane-canvas-builder",
+    "./skills/superplane-monitor",
+    "./skills/superplane-expressions",
+    "./skills/superplane-integrations",
+    "./skills/superplane-troubleshoot"
+  ]
+}

@@ -2,6 +2,9 @@
 .agents/
 skills-lock.json
 
+# Temporary plan file (remove once repo is stable)
+PLAN.md
+
 # OS
 .DS_Store
 Thumbs.db
