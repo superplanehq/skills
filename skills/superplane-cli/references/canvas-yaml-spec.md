@@ -56,7 +56,7 @@ spec:
     pipelineFile: .semaphore/semaphore.yml
     ref: refs/heads/main
   position:
-    x: 600
+    x: 720
     y: 100
   paused: false
   isCollapsed: false
@@ -72,7 +72,7 @@ spec:
     name: approval
   configuration: {}
   position:
-    x: 1080
+    x: 1320
     y: 100
   paused: false
   isCollapsed: false
@@ -98,7 +98,45 @@ spec:
 
 ### Positioning
 
-Downstream nodes go ~480px right. Parallel branches use different `y` values.
+Nodes are rendered on a canvas at `position.x` and `position.y`. Proper spacing prevents overlapping in the UI.
+
+**Node dimensions:** each node card is approximately **515px wide × 215px tall**.
+
+**Layout rules:**
+
+| Direction | Spacing | Rule |
+| --- | --- | --- |
+| Horizontal (x) | **600px** between columns | Each sequential step adds 600 to x (515 node width + 85 gap) |
+| Vertical (y) | **300px** between rows | Each parallel branch adds 300 to y (215 node height + 85 gap) |
+
+**Linear pipeline** — all nodes share the same y, increment x by 600:
+
+```
+Node 1: { x: 120, y: 100 }
+Node 2: { x: 720, y: 100 }
+Node 3: { x: 1320, y: 100 }
+Node 4: { x: 1920, y: 100 }
+```
+
+**Branching (fan-out)** — branches spread vertically from a shared x column. Center the source node vertically relative to its branches:
+
+```
+                          ┌─ Branch A: { x: 1320, y: 100 }
+Source: { x: 720, y: 250 } ─┤
+                          └─ Branch B: { x: 1320, y: 400 }
+```
+
+For 3 branches, use y values like 100, 400, 700 with the source at y: 400.
+
+**Fan-in (Merge)** — place the merge node at the same x as the next column after the branches, with y centered between the branch rows:
+
+```
+Branch A: { x: 1320, y: 100 } ─┐
+                                ├─ Merge: { x: 1920, y: 250 }
+Branch B: { x: 1320, y: 400 } ─┘
+```
+
+**Starting position:** use `{ x: 120, y: 100 }` for the first node (the trigger).
 
 ## Edges
 
@@ -182,7 +220,7 @@ spec:
         project: myapp
         pipelineFile: .semaphore/semaphore.yml
         ref: "{{ $['github.onPush'].ref }}"
-      position: { x: 600, y: 100 }
+      position: { x: 720, y: 100 }
       paused: false
       isCollapsed: false
 
@@ -192,7 +230,7 @@ spec:
       component:
         name: approval
       configuration: {}
-      position: { x: 1080, y: 100 }
+      position: { x: 1320, y: 100 }
       paused: false
       isCollapsed: false
 

@@ -91,7 +91,42 @@ Use the **exact** trigger and component names from step 3 — not guesses from d
 
 See [Components & Triggers Reference](references/components-and-triggers.md) for the full list.
 
-### 5. Configure Expressions
+### 5. Position Nodes
+
+Every node needs a `position: { x, y }`. Nodes are **515px wide × 215px tall** — use these spacing rules to prevent overlap:
+
+| Direction | Increment | Why |
+| --- | --- | --- |
+| Horizontal (x) | **+600px** per column | 515 width + 85 gap |
+| Vertical (y) | **+300px** per row | 215 height + 85 gap |
+
+Start the first node (trigger) at `{ x: 120, y: 100 }`.
+
+**Linear pipeline** — same y, increment x:
+
+```
+Trigger: { x: 120, y: 100 }  →  Step A: { x: 720, y: 100 }  →  Step B: { x: 1320, y: 100 }
+```
+
+**Branching** — branches share the same x column, spread on y. Center the source node vertically relative to its branches:
+
+```
+                                ┌─ Branch A: { x: 1320, y: 100 }
+Source: { x: 720, y: 250 }  ───┤
+                                └─ Branch B: { x: 1320, y: 400 }
+```
+
+**Fan-in (Merge)** — next x column after branches, y centered between them:
+
+```
+Branch A: { x: 1320, y: 100 } ──┐
+                                 ├── Merge: { x: 1920, y: 250 }
+Branch B: { x: 1320, y: 400 } ──┘
+```
+
+For 3+ branches, keep adding 300 to y for each branch and center the source/merge accordingly.
+
+### 6. Configure Expressions
 
 Reference upstream data with Expr language inside `{{ }}`:
 
@@ -101,7 +136,7 @@ Reference upstream data with Expr language inside `{{ }}`:
 | `root()` | Trigger event payload |
 | `previous()` | Immediate upstream payload |
 
-### 6. Apply
+### 7. Apply
 
 ```bash
 superplane canvases create --file canvas.yaml
@@ -136,6 +171,11 @@ This path is slower and less reliable. Always prefer the CLI.
 ### Linear: Trigger → A → B → C
 
 ```yaml
+nodes:
+  - { id: trigger, ..., position: { x: 120, y: 100 } }
+  - { id: a, ..., position: { x: 720, y: 100 } }
+  - { id: b, ..., position: { x: 1320, y: 100 } }
+  - { id: c, ..., position: { x: 1920, y: 100 } }
 edges:
   - { sourceId: trigger, targetId: a, channel: default }
   - { sourceId: a, targetId: b, channel: default }
@@ -145,6 +185,11 @@ edges:
 ### Branch: Filter → passed / failed
 
 ```yaml
+nodes:
+  - { id: trigger, ..., position: { x: 120, y: 250 } }
+  - { id: filter, ..., position: { x: 720, y: 250 } }
+  - { id: on-success, ..., position: { x: 1320, y: 100 } }
+  - { id: on-failure, ..., position: { x: 1320, y: 400 } }
 edges:
   - { sourceId: trigger, targetId: filter, channel: default }
   - { sourceId: filter, targetId: on-success, channel: passed }
@@ -154,6 +199,12 @@ edges:
 ### Fan-out / Fan-in
 
 ```yaml
+nodes:
+  - { id: trigger, ..., position: { x: 120, y: 250 } }
+  - { id: a, ..., position: { x: 720, y: 100 } }
+  - { id: b, ..., position: { x: 720, y: 400 } }
+  - { id: merge, ..., position: { x: 1320, y: 250 } }
+  - { id: final, ..., position: { x: 1920, y: 250 } }
 edges:
   - { sourceId: trigger, targetId: a, channel: default }
   - { sourceId: trigger, targetId: b, channel: default }
@@ -165,6 +216,11 @@ edges:
 ### Approval Gate
 
 ```yaml
+nodes:
+  - { id: ci-done, ..., position: { x: 120, y: 100 } }
+  - { id: timegate, ..., position: { x: 720, y: 100 } }
+  - { id: approval, ..., position: { x: 1320, y: 100 } }
+  - { id: deploy, ..., position: { x: 1920, y: 100 } }
 edges:
   - { sourceId: ci-done, targetId: timegate, channel: default }
   - { sourceId: timegate, targetId: approval, channel: default }
