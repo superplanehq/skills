@@ -18,6 +18,16 @@ Inspect, debug, and manage workflow executions.
 | List queued items | `superplane queue list --canvas-id <id> --node-id <nid>` |
 | Delete queued item | `superplane queue delete --canvas-id <id> --node-id <nid> --item-id <iid>` |
 
+## Verify CLI Is Installed
+
+Before any debugging, confirm the CLI is available:
+
+```bash
+superplane whoami
+```
+
+If `command not found`: stop and tell the user to install the CLI from https://docs.superplane.com/installation/cli. Debugging requires the CLI to inspect events, executions, and queues.
+
 ## Debugging Workflow
 
 ### 1. Find the Canvas
@@ -98,4 +108,11 @@ Merge waits for ALL incoming edges. If one branch is stuck, filtered out, or fai
 | Need | Use Skill |
 | --- | --- |
 | Create or modify a canvas | superplane-canvas-builder |
-| Run general CLI commands | superplane-cli |
+| CLI commands and authentication | superplane-cli |
+
+## Documentation
+
+For agents that can fetch URLs, the full SuperPlane docs are available in LLM-friendly format:
+
+- Compact index: https://docs.superplane.com/llms.txt
+- Full content: https://docs.superplane.com/llms-full.txt

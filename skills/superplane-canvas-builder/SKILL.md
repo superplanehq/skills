@@ -18,34 +18,80 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Create canvas | `superplane canvases create --file canvas.yaml` |
 | Update canvas | `superplane canvases update -f canvas.yaml` |
 
-## Design Process
+## Order of Operations
 
-### 1. Understand the Workflow
+Always follow this sequence. The CLI is the primary path — it gives exact names, IDs, and schemas that documentation cannot reliably substitute.
 
-Identify:
+### 1. Verify CLI and Connect
+
+```bash
+superplane whoami
+```
+
+If `command not found`: **stop**. Tell the user to install the CLI from https://docs.superplane.com/installation/cli and re-run the task. Do not attempt to install it on their behalf. Do not silently fall back to doc-based design.
+
+If not yet connected:
+
+```bash
+superplane connect <URL> <TOKEN>
+superplane whoami
+```
+
+### 2. Understand the Workflow
+
+Before running discovery commands, identify what the workflow needs:
+
 - **What starts it?** → trigger (schedule, webhook, GitHub push, manual)
 - **What steps happen?** → each step is a component node
 - **Any decisions?** → If or Filter components for branching
 - **Any waits?** → Approval, Time Gate, Wait components
-- **Which external systems?** → each maps to an integration
+- **Which external systems?** → each maps to a provider (e.g., GitHub, Slack, Daytona)
 
-### 2. Select Components
+Collect the list of **required providers** from this analysis — you will check them in the next step.
+
+### 3. Discover and Verify Integrations
+
+Run `superplane integrations list` to get all connected integrations in the org. Compare against the required providers from step 2.
+
+**If any required provider is missing:** stop and tell the user before writing any YAML. Example:
+
+> This canvas needs GitHub and Daytona integrations. Your org has GitHub connected but **Daytona is not connected**. Please connect it in the SuperPlane UI (Settings → Integrations) before proceeding.
+
+Do not generate YAML that references providers the org has not connected — it will fail with "integration is required" on every affected node.
+
+**Once all providers are confirmed connected**, discover exact names and schemas:
 
 ```bash
-superplane index integrations
-superplane index components --from github
+superplane integrations list                          # connected instances → real integration IDs
+superplane index triggers --from <provider>           # exact trigger names
+superplane index components --from <provider>         # exact component names
 ```
 
-See [Components & Triggers Reference](references/components-and-triggers.md) for the full list.
+Inspect required config fields and payload shape:
 
-### 3. Wire the Graph
+```bash
+superplane index triggers --name github.onPush
+superplane index components --name semaphore.runWorkflow
+```
+
+List runtime options for `integration-resource` fields:
+
+```bash
+superplane integrations list-resources --id <id> --type <type>
+```
+
+### 4. Select Components and Wire the Graph
+
+Use the **exact** trigger and component names from step 3 — not guesses from documentation.
 
 - Every component needs at least one incoming edge
 - Triggers have no incoming edges
 - Use named channels for branching (Filter → `passed`/`failed`, If → `True`/`False`)
 - Use Merge to fan-in parallel branches
 
-### 4. Configure Expressions
+See [Components & Triggers Reference](references/components-and-triggers.md) for the full list.
+
+### 5. Configure Expressions
 
 Reference upstream data with Expr language inside `{{ }}`:
 
@@ -55,11 +101,35 @@ Reference upstream data with Expr language inside `{{ }}`:
 | `root()` | Trigger event payload |
 | `previous()` | Immediate upstream payload |
 
-### 5. Apply
+### 6. Apply
 
 ```bash
 superplane canvases create --file canvas.yaml
+# or update an existing canvas:
+superplane canvases update --file canvas.yaml
 ```
+
+Then verify:
+
+```bash
+superplane canvases get <name>
+```
+
+Check for `errorMessage` or `warningMessage` on any node.
+
+## Fallback: When CLI Is Not Available
+
+If the CLI cannot be installed or used (e.g., user declines, environment restriction):
+
+1. Build the canvas YAML from documentation and skill references.
+2. Use **placeholders** for integration IDs (e.g., `<GITHUB_INTEGRATION_ID>`) and list which providers the canvas requires.
+3. Add a clear note to the user that they must:
+   - Connect any missing integrations in the SuperPlane UI (Settings → Integrations).
+   - Install the CLI or use the UI to obtain real integration IDs.
+   - Replace all placeholders before applying.
+   - Run `superplane canvases create --file canvas.yaml` (or use the UI) to apply.
+
+This path is slower and less reliable. Always prefer the CLI.
 
 ## Common Patterns
 
@@ -105,8 +175,15 @@ edges:
 
 | Need | Use Skill |
 | --- | --- |
-| Run CLI commands | superplane-cli |
+| CLI commands and authentication | superplane-cli |
 | Debug a failed run | superplane-monitor |
+
+## Documentation
+
+For agents that can fetch URLs, the full SuperPlane docs are available in LLM-friendly format:
+
+- Compact index: https://docs.superplane.com/llms.txt
+- Full content: https://docs.superplane.com/llms-full.txt
 
 ## References
 
