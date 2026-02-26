@@ -37,6 +37,8 @@ superplane connect <URL> <TOKEN>
 superplane whoami
 ```
 
+If connection details are not available, **stop** and ask the user to connect/provide the required URL and token. Do not continue without a working CLI session.
+
 ### 2. Understand the Workflow
 
 Before running discovery commands, identify what the workflow needs:
@@ -67,11 +69,11 @@ superplane index triggers --from <provider>           # exact trigger names
 superplane index components --from <provider>         # exact component names
 ```
 
-Inspect required config fields and payload shape:
+Inspect required config fields, output channels, and payload shape:
 
 ```bash
-superplane index triggers --name github.onPush
-superplane index components --name semaphore.runWorkflow
+superplane index triggers --name github.onPush --output json
+superplane index components --name semaphore.runWorkflow --output json
 ```
 
 List runtime options for `integration-resource` fields:
@@ -182,20 +184,6 @@ superplane canvases get <name>
 ```
 
 Check for `errorMessage` or `warningMessage` on any node.
-
-## Fallback: When CLI Is Not Available
-
-If the CLI cannot be installed or used (e.g., user declines, environment restriction):
-
-1. Build the canvas YAML from documentation and skill references.
-2. Use **placeholders** for integration IDs (e.g., `<GITHUB_INTEGRATION_ID>`) and list which providers the canvas requires.
-3. Add a clear note to the user that they must:
-   - Connect any missing integrations in the SuperPlane UI (Settings → Integrations).
-   - Install the CLI or use the UI to obtain real integration IDs.
-   - Replace all placeholders before applying.
-   - Run `superplane canvases create --file canvas.yaml` (or use the UI) to apply.
-
-This path is slower and less reliable. Always prefer the CLI.
 
 ## Common Patterns
 

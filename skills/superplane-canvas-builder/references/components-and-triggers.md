@@ -2,7 +2,7 @@
 
 This file documents **built-in** (non-integration) components and triggers. For integration-backed components (GitHub, Daytona, etc.), see the per-provider reference files.
 
-> **Note:** The CLI commands `superplane index components --name <name>` and `superplane index triggers --name <name>` return name/label/description but **not** config field schemas. Use this reference and the provider reference files for field formats.
+> **Note:** Use `superplane index components --name <name> --output json` and `superplane index triggers --name <name> --output json` to get the richest machine-readable metadata available from the CLI. Use this reference and provider reference files to capture practical field-format gotchas and real-world examples.
 
 ## Built-in Triggers
 
