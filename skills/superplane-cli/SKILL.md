@@ -18,7 +18,10 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Create canvas | `superplane canvases create <name>` |
 | Create canvas from YAML | `superplane canvases create --file canvas.yaml` |
 | Export canvas | `superplane canvases get <name>` |
-| Update canvas | `superplane canvases update --file canvas.yaml` |
+| Update canvas (default) | `superplane canvases update --file canvas.yaml --auto-layout horizontal` |
+| Auto layout full canvas | `superplane canvases update <name-or-id> --auto-layout horizontal` |
+| Auto layout connected subgraph | `superplane canvases update <name-or-id> --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
+| Auto layout exact selected set | `superplane canvases update <name-or-id> --auto-layout horizontal --auto-layout-scope exact-set --auto-layout-node <node-a> --auto-layout-node <node-b>` |
 | List available providers | `superplane index integrations` |
 | Describe a provider | `superplane index integrations --name github` |
 | List connected integrations | `superplane integrations list` |
@@ -103,10 +106,53 @@ Create a blank canvas, then iterate:
 superplane canvases create my-canvas
 superplane canvases get my-canvas > canvas.yaml
 # edit canvas.yaml
-superplane canvases update --file canvas.yaml
+superplane canvases update --file canvas.yaml --auto-layout horizontal
 ```
 
 See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
+
+### Auto Layout via CLI
+
+Use `canvases update` with auto-layout flags:
+
+Default agent behavior:
+- Always include `--auto-layout horizontal` on `superplane canvases update`.
+- Do not wait for the user to explicitly ask for auto layout.
+
+```bash
+# connected component around one seed node (recommended default for existing canvases)
+superplane canvases update <name-or-id> \
+  --auto-layout horizontal \
+  --auto-layout-scope connected-component \
+  --auto-layout-node <node-id>
+
+# exact node set only (best when the user selected nodes)
+superplane canvases update <name-or-id> \
+  --auto-layout horizontal \
+  --auto-layout-scope exact-set \
+  --auto-layout-node <node-a> \
+  --auto-layout-node <node-b>
+
+# full canvas (use sparingly; see policy below)
+superplane canvases update <name-or-id> --auto-layout horizontal
+```
+
+Rules and behavior:
+- `--auto-layout` is required when using `--auto-layout-scope` or `--auto-layout-node`.
+- Supported algorithm: `horizontal`.
+- Supported scopes: `full-canvas`, `connected-component`, `exact-set`.
+- Default scope behavior:
+  - If no seed nodes are provided: behaves like `full-canvas`.
+  - If seed nodes are provided and scope omitted: behaves like `connected-component`.
+- Recommended policy for agents:
+  - Prefer `connected-component` for existing/disconnected canvases.
+  - Prefer `exact-set` when the user selected specific nodes.
+  - Use `full-canvas` only when creating from scratch, when the graph is one connected component, or when the user explicitly asks for full-canvas layout.
+- Scope selection default:
+  - If a changed/selected node ID is known, use `connected-component` + `--auto-layout-node`.
+  - If a set of changed node IDs is known, use `exact-set` + repeated `--auto-layout-node`.
+  - If no node IDs are available, use `full-canvas`.
+- Positioning is anchor-preserving: the laid-out region keeps its top-left anchor relative to current canvas coordinates to avoid large jumps.
 
 ### 4. Manage Secrets
 

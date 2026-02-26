@@ -2,6 +2,9 @@
 
 Export with `superplane canvases get <name>`, or author from scratch.
 
+> `auto_layout` is an update request option, not a persisted field in canvas YAML.
+> Use `superplane canvases update ... --auto-layout ...` to apply layout.
+
 ## Structure
 
 ```yaml
@@ -243,3 +246,43 @@ spec:
       targetId: approval-gate
       channel: passed
 ```
+
+## CLI Auto Layout Options
+
+Use these flags with `superplane canvases update`:
+
+```bash
+# Layout connected component around seed node(s) (recommended default for existing canvases)
+superplane canvases update <name-or-id> \
+  --auto-layout horizontal \
+  --auto-layout-scope connected-component \
+  --auto-layout-node <node-id>
+
+# Layout only exact node set (best when nodes are pre-selected)
+superplane canvases update <name-or-id> \
+  --auto-layout horizontal \
+  --auto-layout-scope exact-set \
+  --auto-layout-node <node-a> \
+  --auto-layout-node <node-b>
+
+# Full canvas layout (use sparingly; see policy below)
+superplane canvases update <name-or-id> --auto-layout horizontal
+```
+
+Behavior:
+- `--auto-layout` is required when using scope/node flags.
+- Default agent behavior:
+  - Always include `--auto-layout horizontal` when running `superplane canvases update`.
+  - Do not require explicit user prompting for auto layout.
+- If scope is omitted:
+  - no `--auto-layout-node` => full canvas
+  - with `--auto-layout-node` => connected component
+- Recommended policy:
+  - Prefer connected-component for existing/disconnected canvases.
+  - Prefer exact-set when the user selected specific nodes.
+  - Use full-canvas only for new/scratch canvases, mostly connected graphs, or explicit full-canvas requests.
+- Scope selection default:
+  - If a changed/selected node ID is known, use connected-component + `--auto-layout-node`.
+  - If a set of changed node IDs is known, use exact-set + repeated `--auto-layout-node`.
+  - If no node IDs are available, use full-canvas.
+- Layout preserves the current top-left anchor of the laid-out region (relative positioning), so subgraphs do not jump unexpectedly across the canvas.
