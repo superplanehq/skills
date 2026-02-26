@@ -21,7 +21,11 @@ All payloads are wrapped in the SuperPlane envelope: `{ data: {...}, timestamp, 
 
 ### Trigger Configuration
 
-All triggers require a **Repository** (integration-resource field). Additional config per trigger:
+All triggers require a **Repository** (integration-resource field).
+
+> **Repository value format.** The `repository` config value is the resource name as returned by `superplane integrations list-resources --type repository` (e.g., `storejs`), **not** the GitHub `owner/repo` full name (e.g., `puppies-inc/storejs`).
+
+Additional config per trigger:
 
 | Trigger | Config Fields |
 | --- | --- |

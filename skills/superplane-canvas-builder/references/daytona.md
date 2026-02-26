@@ -16,15 +16,33 @@ All payloads are wrapped in the SuperPlane envelope: `{ data: {...}, timestamp, 
 | `daytona.executeCommand` | Run a shell command in a sandbox | `daytona.command.response` | `success`, `failed` |
 | `daytona.getPreviewUrl` | Get a preview URL for a sandbox port | `daytona.preview.response` | `default` |
 
-### Component Configuration
+### Component Configuration (YAML keys)
 
 | Component | Required Fields | Optional Fields |
 | --- | --- | --- |
-| `daytona.createSandbox` | — | Environment Variables, Auto Stop Interval, Target, Snapshot |
-| `daytona.deleteSandbox` | Sandbox (ID) | Force |
-| `daytona.executeCode` | Sandbox ID, Language (`python`/`typescript`/`javascript`), Code | Timeout (ms) |
-| `daytona.executeCommand` | Sandbox ID, Command | Timeout (s), Environment Variables, Working Directory |
-| `daytona.getPreviewUrl` | Sandbox (ID) | Port (default: 3000), Signed URL (default: true), Expires In Seconds (default: 60, max: 86400) |
+| `daytona.createSandbox` | — | `envVars`, `autoStopInterval`, `target`, `snapshot` |
+| `daytona.deleteSandbox` | `sandbox` | `force` |
+| `daytona.executeCode` | `sandboxId`, `language` (`python`/`typescript`/`javascript`), `code` | `timeout` (ms) |
+| `daytona.executeCommand` | `sandboxId`, `command` | `timeout` (s), `envVars`, `workingDirectory` |
+| `daytona.getPreviewUrl` | `sandbox` | `port` (default: 3000), `signedUrl` (default: true), `expiresInSeconds` (default: 60, max: 86400) |
+
+> **Watch the key names.** `executeCommand` and `executeCode` use `sandboxId`. `deleteSandbox` and `getPreviewUrl` use `sandbox`. These are different keys for the same concept.
+
+### Target vs Snapshot
+
+- **`target`** is the compute region/location (e.g., `us-east-1`).
+- **`snapshot`** is the base image/template for the sandbox (e.g., `daytona-small`, `daytona-medium`, `daytona-large`).
+
+These are different concepts. If the user says "use daytona-small", that is a `snapshot`, not a `target`.
+
+### Example `createSandbox` configuration
+
+```yaml
+configuration:
+  snapshot: daytona-small
+  # target: us-east-1          # optional: region from list-resources --type target
+  # autoStopInterval: 30       # optional: minutes of inactivity before auto-stop
+```
 
 ## Typical Flow
 
@@ -80,6 +98,10 @@ $['Delete Sandbox'].data.deleted         # true
 ```
 
 ## Gotchas
+
+### `sandboxId` vs `sandbox` — different keys for the same thing
+
+`executeCommand` and `executeCode` use the key `sandboxId`. `deleteSandbox` and `getPreviewUrl` use the key `sandbox`. Both refer to the sandbox ID from `createSandbox`, but the YAML key name differs. Getting this wrong produces a "field is required" error.
 
 ### `executeCommand` has two output channels, `executeCode` does not
 
