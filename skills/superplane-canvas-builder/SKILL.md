@@ -84,9 +84,11 @@ superplane integrations list-resources --id <id> --type <type>
 
 Use the **exact** trigger and component names from step 3 — not guesses from documentation.
 
+- If the trigger supports built-in filtering (content filter, action filter, ref filter), configure it at the trigger level. Only add a separate Filter or If node when you need logic the trigger's native config cannot express.
 - Every component needs at least one incoming edge
 - Triggers have no incoming edges
-- Use named channels for branching (Filter → `passed`/`failed`, If → `true`/`false`)
+- Use named channels for branching (If → `true`/`false`, Approval → `approved`/`rejected`)
+- Filter only emits to `default` when the expression is true; false events stop silently
 - Use Merge to fan-in parallel branches
 
 See [Components & Triggers Reference](references/components-and-triggers.md) for the full list.
@@ -211,18 +213,32 @@ edges:
   - { sourceId: b, targetId: c, channel: default }
 ```
 
-### Branch: Filter → passed / failed
+### Branch: If → true / false
 
 ```yaml
 nodes:
   - { id: trigger, ..., position: { x: 120, y: 250 } }
-  - { id: filter, ..., position: { x: 720, y: 250 } }
-  - { id: on-success, ..., position: { x: 1320, y: 100 } }
-  - { id: on-failure, ..., position: { x: 1320, y: 400 } }
+  - { id: check, ..., component: { name: if }, position: { x: 720, y: 250 } }
+  - { id: on-true, ..., position: { x: 1320, y: 100 } }
+  - { id: on-false, ..., position: { x: 1320, y: 400 } }
+edges:
+  - { sourceId: trigger, targetId: check, channel: default }
+  - { sourceId: check, targetId: on-true, channel: true }
+  - { sourceId: check, targetId: on-false, channel: false }
+```
+
+### Gate: Filter (pass or stop)
+
+Filter only emits to `default` when true. False events stop — no edge needed.
+
+```yaml
+nodes:
+  - { id: trigger, ..., position: { x: 120, y: 100 } }
+  - { id: filter, ..., component: { name: filter }, position: { x: 720, y: 100 } }
+  - { id: next-step, ..., position: { x: 1320, y: 100 } }
 edges:
   - { sourceId: trigger, targetId: filter, channel: default }
-  - { sourceId: filter, targetId: on-success, channel: passed }
-  - { sourceId: filter, targetId: on-failure, channel: failed }
+  - { sourceId: filter, targetId: next-step, channel: default }
 ```
 
 ### Fan-out / Fan-in

@@ -43,7 +43,7 @@ Channels: `default`
 | --- | --- | --- |
 | `expression` | Yes | Boolean Expr expression |
 
-Channels: `passed`, `failed`
+Channels: `default` (emits only when expression is true; when false, the event stops — nothing is emitted)
 
 ### If (`if`)
 
@@ -66,7 +66,7 @@ Channels: `approved`, `rejected`
 
 No configuration. Waits for all incoming edges before continuing.
 
-Channels: `default`
+Channels: `success`, `timeout`, `fail`
 
 ### Wait (`wait`)
 

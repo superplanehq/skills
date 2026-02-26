@@ -33,6 +33,8 @@ All triggers require a **Repository** (integration-resource field). Additional c
 | `github.onBranchCreated` | **Branches** — list of predicates |
 | `github.onTagCreated` | **Tags** — list of predicates |
 
+> **Prefer trigger-level filtering.** If a trigger's config fields can express your filter (e.g., Content Filter regex on `onPRComment`, Actions list on `onPullRequest`, Refs predicates on `onPush`), configure it there. This avoids unnecessary executions and extra nodes. Only add a downstream Filter or If component when the trigger's native config cannot express the condition.
+
 ## Components (Actions)
 
 | Component | Description | Output Type | Channels |

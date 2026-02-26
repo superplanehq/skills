@@ -149,19 +149,18 @@ edges:
 
 ### Output Channels
 
-| Component | Channels |
-| --- | --- |
-| Filter | `passed`, `failed` |
-| If | `true`, `false` |
-| Approval | `approved`, `rejected` |
-| Everything else | `default` |
+| Component | Channels | Behavior |
+| --- | --- | --- |
+| Filter | `default` | Emits only when true; false events stop silently |
+| If | `true`, `false` | Routes to one of two channels |
+| Approval | `approved`, `rejected` | Routes based on decision |
+| Merge | `success`, `timeout`, `fail` | Routes based on outcome |
+| Everything else | `default` | Single output |
 
 Typical gated flow:
 
 ```
-Trigger → CI component
-CI (passed) → Approval
-Approval (approved) → Deploy component
+Trigger → Filter (default) → Approval (approved) → Deploy component
 ```
 
 ## Expressions
