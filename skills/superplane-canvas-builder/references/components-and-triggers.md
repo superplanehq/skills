@@ -1,5 +1,9 @@
 # Components & Triggers Reference
 
+This file documents **built-in** (non-integration) components and triggers. For integration-backed components (GitHub, Daytona, etc.), see the per-provider reference files.
+
+> **Note:** The CLI commands `superplane index components --name <name>` and `superplane index triggers --name <name>` return name/label/description but **not** config field schemas. Use this reference and the provider reference files for field formats.
+
 ## Built-in Triggers
 
 | Trigger | Key | Configuration |
@@ -18,8 +22,18 @@ Integration triggers (GitHub, AWS, etc.) are discovered via `superplane index tr
 | --- | --- | --- |
 | `method` | Yes | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` |
 | `url` | Yes | Target URL (supports expressions) |
-| `headers` | No | Key-value pairs |
+| `headers` | No | List of `{ name, value }` objects (supports expressions in values) |
 | `body` | No | Request body (supports expressions) |
+
+Example `headers` configuration:
+
+```yaml
+headers:
+  - name: Authorization
+    value: "Bearer {{ $['Get Token'].data.token }}"
+  - name: Content-Type
+    value: application/json
+```
 
 Channels: `default`
 

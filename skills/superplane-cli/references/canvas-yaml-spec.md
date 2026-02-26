@@ -168,7 +168,7 @@ Approval (approved) → Deploy component
 
 Use [Expr language](https://expr-lang.org) inside `{{ }}`.
 
-Every node output and `root()` returns an **envelope**: `{ data: {...}, timestamp, type }`. Access actual payload fields via `.data`:
+Every node output is wrapped in an envelope: `{ data: {...}, timestamp, type }`. Always use `.data.` to access the actual payload:
 
 ```yaml
 url: "https://api.example.com/repos/{{ $['GitHub Push'].data.repository.full_name }}"
@@ -176,10 +176,10 @@ url: "https://api.example.com/repos/{{ $['GitHub Push'].data.repository.full_nam
 
 | Pattern | Description |
 | --- | --- |
-| `$['Node Name'].data.field` | Named node's output field |
-| `root().data.field` | Root trigger event field |
-| `previous().data.field` | Immediate upstream field |
-| `previous(n).data.field` | N levels upstream |
+| `$['Node Name'].data.field` | Access any upstream node's output by name |
+| `root().data.field` | Access the root event that started the run |
+| `previous().data.field` | Access the immediate upstream node's output |
+| `previous(n).data.field` | Walk n levels upstream |
 
 ## Complete Example
 

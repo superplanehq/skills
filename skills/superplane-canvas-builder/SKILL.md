@@ -128,31 +128,42 @@ For 3+ branches, keep adding 300 to y for each branch and center the source/merg
 
 ### 6. Configure Expressions
 
-Every node output and `root()` returns an **envelope**: `{ data: {...}, timestamp, type }`. The actual payload fields live under `.data`.
+> **STOP** before writing any expression that references payload fields you have not confirmed. Do not guess field paths from trigger or component names.
 
-Reference upstream data with Expr language inside `{{ }}`:
+#### Envelope
+
+Every node output is wrapped in an envelope: `{ data: {...}, timestamp, type }`. All three access patterns return this envelope, so you always need `.data.` to reach the actual payload:
 
 | Pattern | Description |
 | --- | --- |
-| `$['Node Name'].data.field` | Named node's output field |
-| `root().data.field` | Root trigger event field |
-| `previous().data.field` | Immediate upstream field |
+| `$['Node Name'].data.field` | Access any upstream node's output by name |
+| `root().data.field` | Access the root event that started the run |
+| `previous().data.field` | Access the immediate upstream node's output |
 
-> **Common mistake:** writing `$['Create Sandbox'].id` instead of `$['Create Sandbox'].data.id`. Always include `.data.` to reach the actual payload.
+> **Common mistake:** writing `$['Create Sandbox'].id` instead of `$['Create Sandbox'].data.id`. Always include `.data.`.
 
-**Verify expressions against real payloads.** The CLI commands `superplane index triggers --name <name>` and `superplane index components --name <name>` only return name/label/description — not payload schemas. After the first run (even a failing one), inspect the actual payload structure:
+Use double curly braces `{{ }}` for expressions in configuration fields:
 
-```bash
-superplane executions list --canvas-id <id> --node-id <nid> -o yaml
+```
+{{ $['GitHub onPush'].data.ref }}
 ```
 
-Look at:
-- `rootEvent.data.data` — the trigger's actual event payload (note the double `.data`: the event envelope wraps the webhook payload)
-- `input.data` — what the node received from its upstream node
+#### How to confirm payload fields
 
-This is the only reliable way to discover field paths for expressions.
+Check these sources in order — use the first one available:
 
-**Trigger payloads follow the external system's webhook format.** For example, `github.onPRComment` uses GitHub's `issue_comment` webhook — PR data is under `data.issue.pull_request` (not `data.pull_request`), and that sub-object only contains URLs, not the full PR with `head.ref`. Do not assume payload structure from the trigger name; always inspect a real execution.
+1. **Existing executions** — inspect real payloads from prior runs (most reliable):
+   ```bash
+   superplane executions list --canvas-id <id> --node-id <nid> -o yaml
+   ```
+
+2. **Provider reference files in this skill** — check the `references/` directory for the provider you are using. These contain payload examples and known gotchas.
+
+3. **SuperPlane docs** — fetch the provider's component page from the LLM-friendly docs:
+   - Compact index: https://docs.superplane.com/llms.txt
+   - Full content: https://docs.superplane.com/llms-full.txt
+
+After the first real execution, always go back to source 1 to verify and correct expressions. The trigger name does not map 1:1 to payload structure — always check the provider reference file or docs for the actual webhook event a trigger maps to.
 
 ### 7. Apply
 
@@ -261,4 +272,6 @@ For agents that can fetch URLs, the full SuperPlane docs are available in LLM-fr
 
 ## References
 
-- [Components & Triggers](references/components-and-triggers.md) — All built-in components and trigger types
+- [Components & Triggers](references/components-and-triggers.md) — Built-in components and trigger types
+- [GitHub](references/github.md) — Triggers, components, payload examples, gotchas
+- [Daytona](references/daytona.md) — Components, payload examples, gotchas
