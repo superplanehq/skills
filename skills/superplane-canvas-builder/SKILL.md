@@ -169,6 +169,14 @@ Check these sources in order — use the first one available:
 
 After the first real execution, always go back to source 1 to verify and correct expressions. The trigger name does not map 1:1 to payload structure — always check the provider reference file or docs for the actual webhook event a trigger maps to.
 
+### 6b. Command Node Best Practices
+
+When a component executes shell commands (e.g., `daytona.executeCommand`, `ssh`):
+
+- **Use the component's native `workingDirectory` / `envVars` config** instead of inline `cd` or `export` in the shell string. This reduces quoting complexity and failure surface.
+- **Redirect verbose output to a file** and emit a concise status marker to stdout (e.g., `STEP_OK` / `STEP_FAILED`). Large or binary stdout can cause node processing issues.
+- **Check the provider reference file** (`references/` directory) for the shell execution model, hardened command templates, and known failure patterns specific to that integration.
+
 ### 7. Apply
 
 ```bash
