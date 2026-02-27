@@ -82,6 +82,10 @@ List runtime options for `integration-resource` fields:
 superplane integrations list-resources --id <id> --type <type>
 ```
 
+**Hard gate before writing/applying YAML:** for every `integration-resource` field value you set (for example: `repository`, `snapshot`, `sandbox`, `project`), verify the exact value exists in `list-resources` output for that integration. If it does not exist, stop and ask the user which valid value to use.
+
+**Schema precedence rule:** if provider reference examples conflict with CLI schema output (`superplane index ... --output json`) or current `list-resources` values, follow CLI output. References are helper material; CLI is source of truth.
+
 ### 4. Select Components and Wire the Graph
 
 Use the **exact** trigger and component names from step 3 — not guesses from documentation.
@@ -176,13 +180,22 @@ When a component executes shell commands (e.g., `daytona.executeCommand`, `ssh`)
 - **Use the component's native `workingDirectory` / `envVars` config** instead of inline `cd` or `export` in the shell string. This reduces quoting complexity and failure surface.
 - **Redirect verbose output to a file** and emit a concise status marker to stdout (e.g., `STEP_OK` / `STEP_FAILED`). Large or binary stdout can cause node processing issues.
 - **Check the provider reference file** (`references/` directory) for the shell execution model, hardened command templates, and known failure patterns specific to that integration.
+- For long multi-step scripts, prefer YAML block scalar (`command: |-`) over folded single-line strings to avoid whitespace/newline parse artifacts in `bash -lc`.
+- Before shipping, run one manual trigger and inspect node `outputs` in execution YAML to confirm expected channel routing (`success` vs `failed`) matches your edge wiring.
 
 ### 7. Apply
 
 ```bash
 superplane canvases create --file canvas.yaml
 # or update an existing canvas:
-superplane canvases update --file canvas.yaml
+superplane canvases update --file canvas.yaml --auto-layout horizontal
+```
+
+When creating a new canvas from YAML, **always** run a follow-up auto-layout update:
+
+```bash
+superplane canvases create --file canvas.yaml
+superplane canvases update --file canvas.yaml --auto-layout horizontal
 ```
 
 Then verify:
@@ -192,6 +205,16 @@ superplane canvases get <name>
 ```
 
 Check for `errorMessage` or `warningMessage` on any node.
+
+### 8. Definition of Done (Canvas Creation)
+
+Before calling the canvas "ready", confirm all of the following:
+
+- Integration IDs resolved from `superplane integrations list`
+- Every `integration-resource` value verified via `superplane integrations list-resources`
+- Canvas created and follow-up auto-layout update applied
+- `superplane canvases get <name> -o yaml` shows empty `errorMessage` and `warningMessage` on all nodes
+- At least one real trigger run checked, including channel-level `outputs` from critical branching nodes
 
 ## Common Patterns
 

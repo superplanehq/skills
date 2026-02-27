@@ -4,6 +4,9 @@ Export with `superplane canvases get <name>`, or author from scratch.
 
 > `auto_layout` is an update request option, not a persisted field in canvas YAML.
 > Use `superplane canvases update ... --auto-layout ...` to apply layout.
+> **Agent rule:** Never stop at `create`. Always run an immediate follow-up update with auto-layout:
+> `superplane canvases create ...` then `superplane canvases update ... --auto-layout horizontal`.
+> **Important:** `superplane canvases update --file canvas.yaml` requires `metadata.id` in that file. Right after `create --file`, prefer `superplane canvases update <name-or-id> --auto-layout horizontal` unless you first export and add `metadata.id`.
 
 ## Structure
 

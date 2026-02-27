@@ -69,6 +69,11 @@ Check if failures are recurring. For expression errors, inspect the actual paylo
 
 Use these real payloads to fix expression paths rather than guessing from documentation.
 
+For branching/channel issues, inspect `outputs` in execution YAML (not just top-level `result`):
+- A node can show `RESULT_PASSED` while only emitting on a non-default channel (for example, `failed`)
+- Confirm emitted channel names under `outputs` match edge wiring (`success`, `failed`, `default`, etc.)
+- If downstream behavior looks inconsistent with `events list-executions`, trust the node's `outputs` block for routing truth
+
 ### 5. Fix and Re-run
 
 Update the canvas, then trigger a new run from the UI or via a manual_run trigger.

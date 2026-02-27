@@ -6,6 +6,11 @@ Daytona is **action-only** — it has no triggers. It provides isolated sandbox 
 
 All payloads are wrapped in the SuperPlane envelope: `{ data: {...}, timestamp, type }`. Expression paths below include the `.data.` prefix.
 
+> **Source of truth:** treat CLI schema and resources as authoritative for your org/runtime:
+> - `superplane index components --name <component> --output json`
+> - `superplane integrations list-resources --id <integration-id> --type <resource-type>`
+> If this reference differs from CLI output, follow CLI output.
+
 ## Components
 
 | Component | Description | Output Type | Channels |
@@ -76,6 +81,13 @@ configuration:
     OPENAI_API_KEY: "{{ secret('openai-key') }}"
 ```
 
+Before applying a canvas, verify selected snapshot/target values exist for the connected integration:
+
+```bash
+superplane integrations list-resources --id <daytona-integration-id> --type snapshot
+superplane integrations list-resources --id <daytona-integration-id> --type target
+```
+
 ## Shell Execution Model
 
 **`daytona.executeCommand` runs commands under POSIX `sh`, not `bash`.** This is the single most common source of failures.
@@ -95,6 +107,15 @@ configuration:
 ```yaml
 command: >-
   bash -lc "set -eu; echo hello; echo world"
+```
+
+For longer scripts, prefer YAML block scalar to reduce folding/escaping risks:
+
+```yaml
+command: |-
+  bash -lc 'set -eu
+  echo hello
+  echo world'
 ```
 
 ### Hardened command template

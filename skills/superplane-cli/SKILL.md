@@ -15,8 +15,8 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Who am I | `superplane whoami` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
-| Create canvas | `superplane canvases create <name>` |
-| Create canvas from YAML | `superplane canvases create --file canvas.yaml` |
+| Create canvas | `superplane canvases create <name>` then `superplane canvases update <name> --auto-layout horizontal` |
+| Create canvas from YAML | `superplane canvases create --file canvas.yaml` then `superplane canvases update <name-or-id> --auto-layout horizontal` |
 | Export canvas | `superplane canvases get <name>` |
 | Update canvas (default) | `superplane canvases update --file canvas.yaml --auto-layout horizontal` |
 | Auto layout full canvas | `superplane canvases update <name-or-id> --auto-layout horizontal` |
@@ -104,8 +104,19 @@ Create a blank canvas, then iterate:
 
 ```bash
 superplane canvases create my-canvas
+superplane canvases update my-canvas --auto-layout horizontal
 superplane canvases get my-canvas > canvas.yaml
 # edit canvas.yaml
+superplane canvases update --file canvas.yaml --auto-layout horizontal
+```
+
+If you create a canvas from YAML, apply the same rule:
+
+```bash
+superplane canvases create --file canvas.yaml
+# preferred immediately after create (does not require metadata.id in local YAML):
+superplane canvases update <name-or-id> --auto-layout horizontal
+# use --file only when your local YAML includes metadata.id:
 superplane canvases update --file canvas.yaml --auto-layout horizontal
 ```
 
