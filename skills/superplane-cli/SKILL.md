@@ -15,13 +15,15 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Who am I | `superplane whoami` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
-| Create canvas | `superplane canvases create <name>` then `superplane canvases update <name> --auto-layout horizontal` |
-| Create canvas from YAML | `superplane canvases create --file canvas.yaml` then `superplane canvases update <name-or-id> --auto-layout horizontal` |
+| Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
+| Create canvas from YAML | `superplane canvases create --file canvas.yaml` then mode-aware update (`--draft` when versioning is enabled) |
 | Export canvas | `superplane canvases get <name>` |
-| Update canvas (default) | `superplane canvases update --file canvas.yaml --auto-layout horizontal` |
-| Auto layout full canvas | `superplane canvases update <name-or-id> --auto-layout horizontal` |
-| Auto layout connected subgraph | `superplane canvases update <name-or-id> --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
-| Auto layout exact selected set | `superplane canvases update <name-or-id> --auto-layout horizontal --auto-layout-scope exact-set --auto-layout-node <node-a> --auto-layout-node <node-b>` |
+| Update canvas in sandbox mode | `superplane canvases update <name-or-id> --file canvas.yaml --auto-layout horizontal` |
+| Update draft in versioning mode | `superplane canvases update <name-or-id> --draft --file canvas.yaml --auto-layout horizontal` |
+| Publish draft (versioning mode) | `superplane canvases publish <name-or-id> --title "..." --description "..."` |
+| Auto layout full canvas | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal` |
+| Auto layout connected subgraph | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
+| Auto layout exact selected set | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal --auto-layout-scope exact-set --auto-layout-node <node-a> --auto-layout-node <node-b>` |
 | List available providers | `superplane index integrations` |
 | Describe a provider | `superplane index integrations --name github` |
 | List connected integrations | `superplane integrations list` |
@@ -104,10 +106,18 @@ Create a blank canvas, then iterate:
 
 ```bash
 superplane canvases create my-canvas
+# sandbox mode:
 superplane canvases update my-canvas --auto-layout horizontal
+# versioning mode:
+superplane canvases update my-canvas --draft --auto-layout horizontal
+superplane canvases publish my-canvas --title "Initial publish"
 superplane canvases get my-canvas > canvas.yaml
 # edit canvas.yaml
+# sandbox mode:
 superplane canvases update --file canvas.yaml --auto-layout horizontal
+# versioning mode:
+superplane canvases update my-canvas --draft --file canvas.yaml --auto-layout horizontal
+superplane canvases publish my-canvas --title "Update canvas"
 ```
 
 If you create a canvas from YAML, apply the same rule:
@@ -115,10 +125,15 @@ If you create a canvas from YAML, apply the same rule:
 ```bash
 superplane canvases create --file canvas.yaml
 # preferred immediately after create (does not require metadata.id in local YAML):
-superplane canvases update <name-or-id> --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
 # use --file only when your local YAML includes metadata.id:
 superplane canvases update --file canvas.yaml --auto-layout horizontal
 ```
+
+Mode rules:
+- **Sandbox mode enabled**: `superplane canvases update ...` updates live directly.
+- **Sandbox mode disabled (versioning enabled)**: `superplane canvases update ...` must include `--draft`; then run `superplane canvases publish ...` to apply live.
+- Live updates without draft/version are blocked when sandbox mode is disabled.
 
 See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
 
@@ -129,27 +144,29 @@ Use `canvases update` with auto-layout flags:
 Default agent behavior:
 - Always include `--auto-layout horizontal` on `superplane canvases update`.
 - Do not wait for the user to explicitly ask for auto layout.
+- In versioning mode, include `--draft` on update and follow with `superplane canvases publish ...`.
 
 ```bash
 # connected component around one seed node (recommended default for existing canvases)
-superplane canvases update <name-or-id> \
+superplane canvases update <name-or-id> [--draft] \
   --auto-layout horizontal \
   --auto-layout-scope connected-component \
   --auto-layout-node <node-id>
 
 # exact node set only (best when the user selected nodes)
-superplane canvases update <name-or-id> \
+superplane canvases update <name-or-id> [--draft] \
   --auto-layout horizontal \
   --auto-layout-scope exact-set \
   --auto-layout-node <node-a> \
   --auto-layout-node <node-b>
 
 # full canvas (use sparingly; see policy below)
-superplane canvases update <name-or-id> --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
 ```
 
 Rules and behavior:
 - `--auto-layout` is required when using `--auto-layout-scope` or `--auto-layout-node`.
+- `--draft` is required when versioning is enabled (sandbox disabled).
 - Supported algorithm: `horizontal`.
 - Supported scopes: `full-canvas`, `connected-component`, `exact-set`.
 - Default scope behavior:
@@ -204,8 +221,9 @@ When a field type is `integration-resource` (like `repository` or `project`), th
 2. `superplane integrations get <id>` — inspect the connection
 3. Add `integration.id` to the node in the canvas YAML
 4. `superplane integrations list-resources --id <id> --type <type>` — find valid resource values
-5. `superplane canvases update --file canvas.yaml` — apply the fix
-6. `superplane canvases get <name>` — verify errors are cleared
+5. `superplane canvases update <name-or-id> [--draft] --file canvas.yaml` — apply the fix
+6. If `--draft` was used: `superplane canvases publish <name-or-id> --title "Fix integration binding"`
+7. `superplane canvases get <name>` — verify errors are cleared
 
 ## When to Use Other Skills
 
