@@ -16,7 +16,9 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Describe a component | `superplane index components --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
-| Update canvas | `superplane canvases update -f canvas.yaml` |
+| Update canvas (sandbox mode) | `superplane canvases update -f canvas.yaml --auto-layout horizontal` |
+| Update draft (versioning mode) | `superplane canvases update <name-or-id> --draft -f canvas.yaml --auto-layout horizontal` |
+| Publish draft (versioning mode) | `superplane canvases publish <name-or-id> --title "..." --description "..."` |
 
 ## Order of Operations
 
@@ -188,15 +190,21 @@ When a component executes shell commands (e.g., `daytona.executeCommand`, `ssh`)
 ```bash
 superplane canvases create --file canvas.yaml
 # or update an existing canvas:
-superplane canvases update --file canvas.yaml --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft] --file canvas.yaml --auto-layout horizontal
 ```
 
 When creating a new canvas from YAML, **always** run a follow-up auto-layout update:
 
 ```bash
 superplane canvases create --file canvas.yaml
-superplane canvases update --file canvas.yaml --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
+# if --draft was used (versioning mode):
+superplane canvases publish <name-or-id> --title "Initial publish"
 ```
+
+Mode rules:
+- Sandbox mode enabled: update applies to live directly (no `--draft`).
+- Sandbox mode disabled: update requires `--draft`; publish is required to make changes live.
 
 Then verify:
 

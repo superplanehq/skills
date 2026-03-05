@@ -5,8 +5,9 @@ Export with `superplane canvases get <name>`, or author from scratch.
 > `auto_layout` is an update request option, not a persisted field in canvas YAML.
 > Use `superplane canvases update ... --auto-layout ...` to apply layout.
 > **Agent rule:** Never stop at `create`. Always run an immediate follow-up update with auto-layout:
-> `superplane canvases create ...` then `superplane canvases update ... --auto-layout horizontal`.
+> `superplane canvases create ...` then `superplane canvases update ... --auto-layout horizontal` (or `--draft --auto-layout horizontal` when versioning is enabled).
 > **Important:** `superplane canvases update --file canvas.yaml` requires `metadata.id` in that file. Right after `create --file`, prefer `superplane canvases update <name-or-id> --auto-layout horizontal` unless you first export and add `metadata.id`.
+> **Mode rule:** when sandbox mode is disabled (versioning enabled), `superplane canvases update` requires `--draft`, and you must run `superplane canvases publish <name-or-id> ...` to apply live.
 
 ## Structure
 
@@ -256,24 +257,25 @@ Use these flags with `superplane canvases update`:
 
 ```bash
 # Layout connected component around seed node(s) (recommended default for existing canvases)
-superplane canvases update <name-or-id> \
+superplane canvases update <name-or-id> [--draft] \
   --auto-layout horizontal \
   --auto-layout-scope connected-component \
   --auto-layout-node <node-id>
 
 # Layout only exact node set (best when nodes are pre-selected)
-superplane canvases update <name-or-id> \
+superplane canvases update <name-or-id> [--draft] \
   --auto-layout horizontal \
   --auto-layout-scope exact-set \
   --auto-layout-node <node-a> \
   --auto-layout-node <node-b>
 
 # Full canvas layout (use sparingly; see policy below)
-superplane canvases update <name-or-id> --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
 ```
 
 Behavior:
 - `--auto-layout` is required when using scope/node flags.
+- In versioning mode, include `--draft` on update, then publish via `superplane canvases publish <name-or-id> --title "..."`.
 - Default agent behavior:
   - Always include `--auto-layout horizontal` when running `superplane canvases update`.
   - Do not require explicit user prompting for auto layout.
