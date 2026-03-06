@@ -13,6 +13,7 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | --- | --- |
 | Connect to org | `superplane connect <URL> <TOKEN>` |
 | Who am I | `superplane whoami` |
+| Check sandbox mode | `superplane whoami -o json | jq '.canvasSandboxModeEnabled'` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
 | Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
@@ -66,6 +67,23 @@ Create a service account in the SuperPlane UI, then:
 superplane connect https://superplane.example.com <API_TOKEN>
 superplane whoami
 ```
+
+### 1b. Detect Canvas Mode (Required Before Any Update/Publish)
+
+Always determine mode first, then choose update commands.
+
+```bash
+superplane whoami -o json | jq '.canvasSandboxModeEnabled'
+```
+
+Interpretation:
+- `true`: sandbox mode enabled. Use `superplane canvases update ...` (no `--draft`) and do not use `publish`.
+- `false`: versioning mode. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
+- `null`: undetermined. Probe behavior with `superplane canvases update --draft ...` and follow CLI error guidance.
+
+Behavior-based fallback:
+- `--draft cannot be used when canvas sandbox mode is enabled` => sandbox mode enabled.
+- `canvas versioning is enabled for this organization; use --draft` => versioning mode.
 
 ### 2. Discover What Exists
 

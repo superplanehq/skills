@@ -15,6 +15,7 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Components from integration | `superplane index components --from <integration>` |
 | Describe a component | `superplane index components --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
+| Check sandbox mode | `superplane whoami -o json | jq '.canvasSandboxModeEnabled'` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
 | Update canvas (sandbox mode) | `superplane canvases update -f canvas.yaml --auto-layout horizontal` |
 | Update draft (versioning mode) | `superplane canvases update <name-or-id> --draft -f canvas.yaml --auto-layout horizontal` |
@@ -40,6 +41,23 @@ superplane whoami
 ```
 
 If connection details are not available, **stop** and ask the user to connect/provide the required URL and token. Do not continue without a working CLI session.
+
+### 1b. Detect Canvas Mode (Required Before Apply)
+
+Always detect canvas mode before any `canvases update` or `canvases publish` command:
+
+```bash
+superplane whoami -o json | jq '.canvasSandboxModeEnabled'
+```
+
+Interpretation:
+- `true`: sandbox mode enabled. Use `superplane canvases update ...` without `--draft`; do not use `publish`.
+- `false`: versioning mode. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
+- `null`: undetermined. Probe behavior with `superplane canvases update --draft ...` and follow CLI error guidance.
+
+Behavior-based fallback:
+- `--draft cannot be used when canvas sandbox mode is enabled` => sandbox mode enabled.
+- `canvas versioning is enabled for this organization; use --draft` => versioning mode.
 
 ### 2. Understand the Workflow
 
