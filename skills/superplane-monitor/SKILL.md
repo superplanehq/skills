@@ -31,11 +31,11 @@ If `command not found`: stop and tell the user to install the CLI from https://d
 If debugging will require canvas edits, detect mode first:
 
 ```bash
-superplane whoami -o json | jq '.canvasSandboxModeEnabled'
+superplane whoami -o json | jq '.canvasVersioningEnabled'
 ```
 
-- `true`: apply fixes with `superplane canvases update ...` (no `--draft`).
-- `false`: apply fixes with `superplane canvases update --draft ...` and publish with `superplane canvases publish ...`.
+- `true`: apply fixes with `superplane canvases update --draft ...` and publish with `superplane canvases publish ...`.
+- `false`: apply fixes with `superplane canvases update ...` (no `--draft`).
 
 ## Debugging Workflow
 

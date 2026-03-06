@@ -13,15 +13,15 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | --- | --- |
 | Connect to org | `superplane connect <URL> <TOKEN>` |
 | Who am I | `superplane whoami` |
-| Check sandbox mode | `superplane whoami -o json | jq '.canvasSandboxModeEnabled'` |
+| Check versioning mode | `superplane whoami -o json | jq '.canvasVersioningEnabled'` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
 | Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
 | Create canvas from YAML | `superplane canvases create --file canvas.yaml` then mode-aware update (`--draft` when versioning is enabled) |
 | Export canvas | `superplane canvases get <name>` |
-| Update canvas in sandbox mode | `superplane canvases update <name-or-id> --file canvas.yaml --auto-layout horizontal` |
-| Update draft in versioning mode | `superplane canvases update <name-or-id> --draft --file canvas.yaml --auto-layout horizontal` |
-| Publish draft (versioning mode) | `superplane canvases publish <name-or-id> --title "..." --description "..."` |
+| Update canvas in versioning-disabled mode | `superplane canvases update <name-or-id> --file canvas.yaml --auto-layout horizontal` |
+| Update draft in versioning-enabled mode | `superplane canvases update <name-or-id> --draft --file canvas.yaml --auto-layout horizontal` |
+| Publish draft (versioning-enabled mode) | `superplane canvases publish <name-or-id> --title "..." --description "..."` |
 | Auto layout full canvas | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal` |
 | Auto layout connected subgraph | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
 | Auto layout exact selected set | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal --auto-layout-scope exact-set --auto-layout-node <node-a> --auto-layout-node <node-b>` |
@@ -73,17 +73,17 @@ superplane whoami
 Always determine mode first, then choose update commands.
 
 ```bash
-superplane whoami -o json | jq '.canvasSandboxModeEnabled'
+superplane whoami -o json | jq '.canvasVersioningEnabled'
 ```
 
 Interpretation:
-- `true`: sandbox mode enabled. Use `superplane canvases update ...` (no `--draft`) and do not use `publish`.
-- `false`: versioning mode. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
+- `true`: versioning enabled. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
+- `false`: versioning disabled. Use `superplane canvases update ...` (no `--draft`) and do not use `publish`.
 - `null`: undetermined. Probe behavior with `superplane canvases update --draft ...` and follow CLI error guidance.
 
 Behavior-based fallback:
-- `--draft cannot be used when canvas sandbox mode is enabled` => sandbox mode enabled.
-- `canvas versioning is enabled for this organization; use --draft` => versioning mode.
+- `--draft cannot be used when canvas versioning is disabled` => versioning disabled.
+- `canvas versioning is enabled for this organization; use --draft` => versioning enabled.
 
 ### 2. Discover What Exists
 
@@ -124,16 +124,16 @@ Create a blank canvas, then iterate:
 
 ```bash
 superplane canvases create my-canvas
-# sandbox mode:
+# versioning disabled:
 superplane canvases update my-canvas --auto-layout horizontal
-# versioning mode:
+# versioning enabled:
 superplane canvases update my-canvas --draft --auto-layout horizontal
 superplane canvases publish my-canvas --title "Initial publish"
 superplane canvases get my-canvas > canvas.yaml
 # edit canvas.yaml
-# sandbox mode:
+# versioning disabled:
 superplane canvases update --file canvas.yaml --auto-layout horizontal
-# versioning mode:
+# versioning enabled:
 superplane canvases update my-canvas --draft --file canvas.yaml --auto-layout horizontal
 superplane canvases publish my-canvas --title "Update canvas"
 ```
@@ -149,9 +149,9 @@ superplane canvases update --file canvas.yaml --auto-layout horizontal
 ```
 
 Mode rules:
-- **Sandbox mode enabled**: `superplane canvases update ...` updates live directly.
-- **Sandbox mode disabled (versioning enabled)**: `superplane canvases update ...` must include `--draft`; then run `superplane canvases publish ...` to apply live.
-- Live updates without draft/version are blocked when sandbox mode is disabled.
+- **Versioning enabled**: `superplane canvases update ...` must include `--draft`; then run `superplane canvases publish ...` to apply live.
+- **Versioning disabled**: `superplane canvases update ...` updates live directly.
+- Live updates without draft/version are blocked when versioning is enabled.
 
 See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
 
@@ -184,7 +184,7 @@ superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
 
 Rules and behavior:
 - `--auto-layout` is required when using `--auto-layout-scope` or `--auto-layout-node`.
-- `--draft` is required when versioning is enabled (sandbox disabled).
+- `--draft` is required when versioning is enabled.
 - Supported algorithm: `horizontal`.
 - Supported scopes: `full-canvas`, `connected-component`, `exact-set`.
 - Default scope behavior:
