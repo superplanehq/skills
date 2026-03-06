@@ -28,6 +28,15 @@ superplane whoami
 
 If `command not found`: stop and tell the user to install the CLI from https://docs.superplane.com/installation/cli. Debugging requires the CLI to inspect events, executions, and queues.
 
+If debugging will require canvas edits, detect mode first:
+
+```bash
+superplane whoami -o json | jq '.canvasSandboxModeEnabled'
+```
+
+- `true`: apply fixes with `superplane canvases update ...` (no `--draft`).
+- `false`: apply fixes with `superplane canvases update --draft ...` and publish with `superplane canvases publish ...`.
+
 ## Debugging Workflow
 
 ### 1. Find the Canvas
