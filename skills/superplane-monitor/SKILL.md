@@ -36,8 +36,8 @@ superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersio
 
 - `true`: apply fixes with `superplane canvases update --draft ...` and publish with `superplane canvases publish ...`.
 - `false`: apply fixes with `superplane canvases update ...` (no `--draft`).
-- Org override: if organization versioning is enabled, canvases can still toggle versioning individually.
-- Org override: if organization versioning is disabled, all canvases are effectively non-versioned.
+- Org override: if organization versioning is enabled, all canvases are effectively versioned.
+- Org override: if organization versioning is disabled, canvases can still toggle versioning individually.
 
 ## Debugging Workflow
 

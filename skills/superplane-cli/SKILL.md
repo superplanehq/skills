@@ -81,12 +81,12 @@ Interpretation:
 - `false`: effective versioning disabled for this canvas. Use `superplane canvases update ...` (no `--draft`) and do not use `publish`.
 
 Behavior-based fallback:
-- `--draft cannot be used when canvas versioning is disabled` => versioning disabled.
-- `canvas versioning is enabled for this canvas; use --draft` => versioning enabled.
+- `--draft cannot be used when effective canvas versioning is disabled` => versioning disabled.
+- `effective canvas versioning is enabled for this canvas; use --draft` => versioning enabled.
 
 Org override rule:
-- If organization versioning is enabled, each canvas can still enable/disable versioning independently.
-- If organization versioning is disabled, versioning is effectively disabled for all canvases.
+- If organization versioning is enabled, all canvases are effectively versioned.
+- If organization versioning is disabled, each canvas can still enable/disable versioning independently.
 
 ### 2. Discover What Exists
 
