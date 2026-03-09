@@ -15,11 +15,11 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Components from integration | `superplane index components --from <integration>` |
 | Describe a component | `superplane index components --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
-| Check sandbox mode | `superplane whoami -o json | jq '.canvasSandboxModeEnabled'` |
+| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
-| Update canvas (sandbox mode) | `superplane canvases update -f canvas.yaml --auto-layout horizontal` |
-| Update draft (versioning mode) | `superplane canvases update <name-or-id> --draft -f canvas.yaml --auto-layout horizontal` |
-| Publish draft (versioning mode) | `superplane canvases publish <name-or-id> --title "..." --description "..."` |
+| Update canvas (versioning disabled) | `superplane canvases update -f canvas.yaml --auto-layout horizontal` |
+| Update draft (versioning enabled) | `superplane canvases update <name-or-id> --draft -f canvas.yaml --auto-layout horizontal` |
+| Publish draft (versioning enabled) | `superplane canvases publish <name-or-id> --title "..." --description "..."` |
 
 ## Order of Operations
 
@@ -47,17 +47,20 @@ If connection details are not available, **stop** and ask the user to connect/pr
 Always detect canvas mode before any `canvases update` or `canvases publish` command:
 
 ```bash
-superplane whoami -o json | jq '.canvasSandboxModeEnabled'
+superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
 ```
 
 Interpretation:
-- `true`: sandbox mode enabled. Use `superplane canvases update ...` without `--draft`; do not use `publish`.
-- `false`: versioning mode. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
-- `null`: undetermined. Probe behavior with `superplane canvases update --draft ...` and follow CLI error guidance.
+- `true`: effective versioning enabled for this canvas. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
+- `false`: effective versioning disabled for this canvas. Use `superplane canvases update ...` without `--draft`; do not use `publish`.
 
 Behavior-based fallback:
-- `--draft cannot be used when canvas sandbox mode is enabled` => sandbox mode enabled.
-- `canvas versioning is enabled for this organization; use --draft` => versioning mode.
+- `--draft cannot be used when effective canvas versioning is disabled` => versioning disabled.
+- `effective canvas versioning is enabled for this canvas; use --draft` => versioning enabled.
+
+Org override rule:
+- If organization versioning is enabled, all canvases are effectively versioned.
+- If organization versioning is disabled, each canvas can still enable/disable versioning independently.
 
 ### 2. Understand the Workflow
 
@@ -221,8 +224,8 @@ superplane canvases publish <name-or-id> --title "Initial publish"
 ```
 
 Mode rules:
-- Sandbox mode enabled: update applies to live directly (no `--draft`).
-- Sandbox mode disabled: update requires `--draft`; publish is required to make changes live.
+- Versioning enabled: update requires `--draft`; publish is required to make changes live.
+- Versioning disabled: update applies to live directly (no `--draft`).
 
 Then verify:
 
