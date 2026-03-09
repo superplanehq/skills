@@ -15,7 +15,7 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Components from integration | `superplane index components --from <integration>` |
 | Describe a component | `superplane index components --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
-| Check versioning mode | `superplane whoami -o json | jq '.canvasVersioningEnabled'` |
+| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
 | Update canvas (versioning disabled) | `superplane canvases update -f canvas.yaml --auto-layout horizontal` |
 | Update draft (versioning enabled) | `superplane canvases update <name-or-id> --draft -f canvas.yaml --auto-layout horizontal` |
@@ -47,17 +47,20 @@ If connection details are not available, **stop** and ask the user to connect/pr
 Always detect canvas mode before any `canvases update` or `canvases publish` command:
 
 ```bash
-superplane whoami -o json | jq '.canvasVersioningEnabled'
+superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
 ```
 
 Interpretation:
-- `true`: versioning enabled. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
-- `false`: versioning disabled. Use `superplane canvases update ...` without `--draft`; do not use `publish`.
-- `null`: undetermined. Probe behavior with `superplane canvases update --draft ...` and follow CLI error guidance.
+- `true`: effective versioning enabled for this canvas. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
+- `false`: effective versioning disabled for this canvas. Use `superplane canvases update ...` without `--draft`; do not use `publish`.
 
 Behavior-based fallback:
 - `--draft cannot be used when canvas versioning is disabled` => versioning disabled.
-- `canvas versioning is enabled for this organization; use --draft` => versioning enabled.
+- `canvas versioning is enabled for this canvas; use --draft` => versioning enabled.
+
+Org override rule:
+- If organization versioning is enabled, each canvas can still enable/disable versioning independently.
+- If organization versioning is disabled, versioning is effectively disabled for all canvases.
 
 ### 2. Understand the Workflow
 

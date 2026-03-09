@@ -13,7 +13,7 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | --- | --- |
 | Connect to org | `superplane connect <URL> <TOKEN>` |
 | Who am I | `superplane whoami` |
-| Check versioning mode | `superplane whoami -o json | jq '.canvasVersioningEnabled'` |
+| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
 | Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
@@ -73,17 +73,20 @@ superplane whoami
 Always determine mode first, then choose update commands.
 
 ```bash
-superplane whoami -o json | jq '.canvasVersioningEnabled'
+superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
 ```
 
 Interpretation:
-- `true`: versioning enabled. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
-- `false`: versioning disabled. Use `superplane canvases update ...` (no `--draft`) and do not use `publish`.
-- `null`: undetermined. Probe behavior with `superplane canvases update --draft ...` and follow CLI error guidance.
+- `true`: effective versioning enabled for this canvas. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
+- `false`: effective versioning disabled for this canvas. Use `superplane canvases update ...` (no `--draft`) and do not use `publish`.
 
 Behavior-based fallback:
 - `--draft cannot be used when canvas versioning is disabled` => versioning disabled.
-- `canvas versioning is enabled for this organization; use --draft` => versioning enabled.
+- `canvas versioning is enabled for this canvas; use --draft` => versioning enabled.
+
+Org override rule:
+- If organization versioning is enabled, each canvas can still enable/disable versioning independently.
+- If organization versioning is disabled, versioning is effectively disabled for all canvases.
 
 ### 2. Discover What Exists
 

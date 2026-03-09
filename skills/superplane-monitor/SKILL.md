@@ -31,11 +31,13 @@ If `command not found`: stop and tell the user to install the CLI from https://d
 If debugging will require canvas edits, detect mode first:
 
 ```bash
-superplane whoami -o json | jq '.canvasVersioningEnabled'
+superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
 ```
 
 - `true`: apply fixes with `superplane canvases update --draft ...` and publish with `superplane canvases publish ...`.
 - `false`: apply fixes with `superplane canvases update ...` (no `--draft`).
+- Org override: if organization versioning is enabled, canvases can still toggle versioning individually.
+- Org override: if organization versioning is disabled, all canvases are effectively non-versioned.
 
 ## Debugging Workflow
 
