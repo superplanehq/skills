@@ -14,6 +14,7 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Connect to org | `superplane connect <URL> <TOKEN>` |
 | Who am I | `superplane whoami` |
 | Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'` |
+| Set active canvas | `superplane canvases active [canvas-id]` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
 | Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
@@ -21,7 +22,12 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Export canvas | `superplane canvases get <name>` |
 | Update canvas in versioning-disabled mode | `superplane canvases update <name-or-id> --file canvas.yaml --auto-layout horizontal` |
 | Update draft in versioning-enabled mode | `superplane canvases update <name-or-id> --draft --file canvas.yaml --auto-layout horizontal` |
-| Publish draft (versioning-enabled mode) | `superplane canvases publish <name-or-id> --title "..." --description "..."` |
+| Create change request (versioning enabled) | `superplane canvases change-requests create [name-or-id] [--version-id <id>] [--title <text>] [--description <text>]` |
+| List change requests | `superplane canvases change-requests list [name-or-id] [--status <filter>] [--mine] [--query <text>] [--limit <n>] [--before <rfc3339>]` |
+| Approve / unapprove change request | `superplane canvases change-requests approve <change-request-id> [name-or-id]` / `superplane canvases change-requests unapprove <change-request-id> [name-or-id]` |
+| Publish change request | `superplane canvases change-requests publish <change-request-id> [name-or-id]` |
+| Reject / reopen change request | `superplane canvases change-requests reject <change-request-id> [name-or-id]` / `superplane canvases change-requests reopen <change-request-id> [name-or-id]` |
+| Resolve conflicted change request | `superplane canvases change-requests resolve <change-request-id> [name-or-id] --file canvas.yaml [--auto-layout horizontal] [--auto-layout-scope <scope>] [--auto-layout-node <id>]` |
 | Auto layout full canvas | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal` |
 | Auto layout connected subgraph | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
 | Auto layout exact selected set | `superplane canvases update <name-or-id> [--draft] --auto-layout horizontal --auto-layout-scope exact-set --auto-layout-node <node-a> --auto-layout-node <node-b>` |
@@ -68,7 +74,7 @@ superplane connect https://superplane.example.com <API_TOKEN>
 superplane whoami
 ```
 
-### 1b. Detect Canvas Mode (Required Before Any Update/Publish)
+### 1b. Detect Canvas Mode (Required Before Any Update/Change Request Action)
 
 Always determine mode first, then choose update commands.
 
@@ -77,16 +83,58 @@ superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersio
 ```
 
 Interpretation:
-- `true`: effective versioning enabled for this canvas. Use `superplane canvases update --draft ...` then `superplane canvases publish ...`.
-- `false`: effective versioning disabled for this canvas. Use `superplane canvases update ...` (no `--draft`) and do not use `publish`.
+- `true`: effective versioning enabled for this canvas. Use `superplane canvases update --draft ...`, then create/publish via `superplane canvases change-requests ...`.
+- `false`: effective versioning disabled for this canvas. Use `superplane canvases update ...` (no `--draft`) and do not use `canvases change-requests`.
 
 Behavior-based fallback:
 - `--draft cannot be used when effective canvas versioning is disabled` => versioning disabled.
 - `effective canvas versioning is enabled for this canvas; use --draft` => versioning enabled.
+- `effective canvas versioning is disabled for this canvas` when running `canvases change-requests ...` => change requests unavailable for this canvas.
 
 Org override rule:
 - If organization versioning is enabled, all canvases are effectively versioned.
 - If organization versioning is disabled, each canvas can still enable/disable versioning independently.
+
+### 1c. Change Request Lifecycle (Versioning Enabled)
+
+When effective canvas versioning is enabled:
+
+1. Update the draft version (`superplane canvases update --draft ...`).
+2. Create a change request from that draft.
+3. Review and collect approvals.
+4. Publish the change request.
+
+Status model:
+- `STATUS_OPEN`
+- `STATUS_REJECTED`
+- `STATUS_PUBLISHED`
+- Conflict is tracked separately via `is_conflicted` (there is no `STATUS_CONFLICTED`).
+
+Action rules:
+- `approve`: only open + non-conflicted.
+- `unapprove`: only if the current user has an active approval on an open change request.
+- `publish`: only open + non-conflicted + all configured approver requirements actively approved.
+- `reject`: allowed for open change requests (including conflicted); invalidates active approvals.
+- `reopen`: only rejected; recomputes diff/conflicts and invalidates active approvals.
+- `resolve`: updates the change-request version with a resolved canvas payload.
+
+Commands:
+
+```bash
+superplane canvases change-requests list [name-or-id] [--status <filter>] [--mine] [--query <text>] [--limit <n>] [--before <rfc3339>]
+superplane canvases change-requests get <change-request-id> [name-or-id]
+superplane canvases change-requests create [name-or-id] [--version-id <id>] [--title <text>] [--description <text>]
+superplane canvases change-requests approve <change-request-id> [name-or-id]
+superplane canvases change-requests unapprove <change-request-id> [name-or-id]
+superplane canvases change-requests publish <change-request-id> [name-or-id]
+superplane canvases change-requests reject <change-request-id> [name-or-id]
+superplane canvases change-requests reopen <change-request-id> [name-or-id]
+superplane canvases change-requests resolve <change-request-id> [name-or-id] --file <canvas.yaml> [--auto-layout horizontal] [--auto-layout-scope <scope>] [--auto-layout-node <id>]
+```
+
+Notes:
+- `name-or-id` is optional when an active canvas is set with `superplane canvases active`.
+- `--status` supports `all`, `open`, `conflicted`, `rejected`, `published`.
 
 ### 2. Discover What Exists
 
@@ -131,14 +179,21 @@ superplane canvases create my-canvas
 superplane canvases update my-canvas --auto-layout horizontal
 # versioning enabled:
 superplane canvases update my-canvas --draft --auto-layout horizontal
-superplane canvases publish my-canvas --title "Initial publish"
+superplane canvases change-requests create my-canvas --title "Initial publish"
+# if required by approver rules:
+superplane canvases change-requests approve <change-request-id> my-canvas
+# publish once required approvals are active and the CR is non-conflicted:
+superplane canvases change-requests publish <change-request-id> my-canvas
 superplane canvases get my-canvas > canvas.yaml
 # edit canvas.yaml
 # versioning disabled:
 superplane canvases update --file canvas.yaml --auto-layout horizontal
 # versioning enabled:
 superplane canvases update my-canvas --draft --file canvas.yaml --auto-layout horizontal
-superplane canvases publish my-canvas --title "Update canvas"
+superplane canvases change-requests create my-canvas --title "Update canvas"
+# if required by approver rules:
+superplane canvases change-requests approve <change-request-id> my-canvas
+superplane canvases change-requests publish <change-request-id> my-canvas
 ```
 
 If you create a canvas from YAML, apply the same rule:
@@ -152,8 +207,9 @@ superplane canvases update --file canvas.yaml --auto-layout horizontal
 ```
 
 Mode rules:
-- **Versioning enabled**: `superplane canvases update ...` must include `--draft`; then run `superplane canvases publish ...` to apply live.
-- **Versioning disabled**: `superplane canvases update ...` updates live directly.
+- **Versioning enabled**: `superplane canvases update ...` must include `--draft`; then create a change request and publish it to apply live.
+- `change-requests publish` requires the change request to be open, non-conflicted, and fully approved by configured approver rules.
+- **Versioning disabled**: `superplane canvases update ...` updates live directly; `canvases change-requests ...` is unavailable.
 - Live updates without draft/version are blocked when versioning is enabled.
 
 See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
@@ -165,7 +221,7 @@ Use `canvases update` with auto-layout flags:
 Default agent behavior:
 - Always include `--auto-layout horizontal` on `superplane canvases update`.
 - Do not wait for the user to explicitly ask for auto layout.
-- In versioning mode, include `--draft` on update and follow with `superplane canvases publish ...`.
+- In versioning mode, include `--draft` on update. Draft changes go live only after `canvases change-requests create` and `canvases change-requests publish`.
 
 ```bash
 # connected component around one seed node (recommended default for existing canvases)
@@ -243,8 +299,10 @@ When a field type is `integration-resource` (like `repository` or `project`), th
 3. Add `integration.id` to the node in the canvas YAML
 4. `superplane integrations list-resources --id <id> --type <type>` — find valid resource values
 5. `superplane canvases update <name-or-id> [--draft] --file canvas.yaml` — apply the fix
-6. If `--draft` was used: `superplane canvases publish <name-or-id> --title "Fix integration binding"`
-7. `superplane canvases get <name>` — verify errors are cleared
+6. If `--draft` was used: `superplane canvases change-requests create <name-or-id> --title "Fix integration binding"`
+7. If needed: `superplane canvases change-requests approve <change-request-id> <name-or-id>`
+8. If `--draft` was used: `superplane canvases change-requests publish <change-request-id> <name-or-id>`
+9. `superplane canvases get <name>` — verify errors are cleared
 
 ## When to Use Other Skills
 
