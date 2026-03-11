@@ -7,7 +7,7 @@ Export with `superplane canvases get <name>`, or author from scratch.
 > **Agent rule:** Never stop at `create`. Always run an immediate follow-up update with auto-layout:
 > `superplane canvases create ...` then `superplane canvases update ... --auto-layout horizontal` (or `--draft --auto-layout horizontal` when versioning is enabled).
 > **Important:** `superplane canvases update --file canvas.yaml` requires `metadata.id` in that file. Right after `create --file`, prefer `superplane canvases update <name-or-id> --auto-layout horizontal` unless you first export and add `metadata.id`.
-> **Mode rule:** when versioning is enabled, `superplane canvases update` requires `--draft`, and you must run `superplane canvases publish <name-or-id> ...` to apply live.
+> **Mode rule:** when versioning is enabled, `superplane canvases update` requires `--draft`. To apply changes live, create and publish a change request (`superplane canvases change-requests create ...` then `superplane canvases change-requests publish ...`).
 
 ## Structure
 
@@ -275,7 +275,7 @@ superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
 
 Behavior:
 - `--auto-layout` is required when using scope/node flags.
-- In versioning mode, include `--draft` on update, then publish via `superplane canvases publish <name-or-id> --title "..."`.
+- In versioning mode, include `--draft` on update. To apply live, create and publish a change request.
 - Default agent behavior:
   - Always include `--auto-layout horizontal` when running `superplane canvases update`.
   - Do not require explicit user prompting for auto layout.

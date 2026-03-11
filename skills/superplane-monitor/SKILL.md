@@ -34,8 +34,8 @@ If debugging will require canvas edits, detect mode first:
 superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
 ```
 
-- `true`: apply fixes with `superplane canvases update --draft ...` and publish with `superplane canvases publish ...`.
-- `false`: apply fixes with `superplane canvases update ...` (no `--draft`).
+- `true`: apply fixes with `superplane canvases update --draft ...`, then create/publish via `superplane canvases change-requests ...`.
+- `false`: apply fixes with `superplane canvases update ...` (no `--draft`); `canvases change-requests` is unavailable.
 - Org override: if organization versioning is enabled, all canvases are effectively versioned.
 - Org override: if organization versioning is disabled, canvases can still toggle versioning individually.
 
@@ -88,6 +88,16 @@ For branching/channel issues, inspect `outputs` in execution YAML (not just top-
 ### 5. Fix and Re-run
 
 Update the canvas, then trigger a new run from the UI or via a manual_run trigger.
+
+For versioning-enabled canvases, use the change-request lifecycle:
+
+```bash
+superplane canvases update <name-or-id> --draft --file canvas.yaml --auto-layout horizontal
+superplane canvases change-requests create <name-or-id> --title "Fix failing workflow"
+superplane canvases change-requests publish <change-request-id> <name-or-id>
+```
+
+If publish is blocked, inspect with `change-requests get` and then use `approve`, `unapprove`, `reject`, `reopen`, or `resolve` as needed.
 
 ## Common Failure Patterns
 
