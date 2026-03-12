@@ -92,7 +92,7 @@ Update the canvas, then trigger a new run from the UI or via a manual_run trigge
 For versioning-enabled canvases, use the change-request lifecycle:
 
 ```bash
-superplane canvases update <name-or-id> --draft --file canvas.yaml --auto-layout horizontal
+superplane canvases update <name-or-id> --draft --file canvas.yaml
 superplane canvases change-requests create <name-or-id> --title "Fix failing workflow"
 superplane canvases change-requests publish <change-request-id> <name-or-id>
 ```

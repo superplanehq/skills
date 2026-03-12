@@ -20,8 +20,8 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
 | Create canvas from YAML | `superplane canvases create --file canvas.yaml` then mode-aware update (`--draft` when versioning is enabled) |
 | Export canvas | `superplane canvases get <name>` |
-| Update canvas in versioning-disabled mode | `superplane canvases update <name-or-id> --file canvas.yaml --auto-layout horizontal` |
-| Update draft in versioning-enabled mode | `superplane canvases update <name-or-id> --draft --file canvas.yaml --auto-layout horizontal` |
+| Update canvas in versioning-disabled mode | `superplane canvases update <name-or-id> --file canvas.yaml` |
+| Update draft in versioning-enabled mode | `superplane canvases update <name-or-id> --draft --file canvas.yaml` |
 | Create change request (versioning enabled) | `superplane canvases change-requests create [name-or-id] [--version-id <id>] [--title <text>] [--description <text>]` |
 | List change requests | `superplane canvases change-requests list [name-or-id] [--status <filter>] [--mine] [--query <text>] [--limit <n>] [--before <rfc3339>]` |
 | Approve / unapprove change request | `superplane canvases change-requests approve <change-request-id> [name-or-id]` / `superplane canvases change-requests unapprove <change-request-id> [name-or-id]` |
@@ -176,9 +176,9 @@ Create a blank canvas, then iterate:
 ```bash
 superplane canvases create my-canvas
 # versioning disabled:
-superplane canvases update my-canvas --auto-layout horizontal
+superplane canvases update my-canvas
 # versioning enabled:
-superplane canvases update my-canvas --draft --auto-layout horizontal
+superplane canvases update my-canvas --draft
 superplane canvases change-requests create my-canvas --title "Initial publish"
 # if required by approver rules:
 superplane canvases change-requests approve <change-request-id> my-canvas
@@ -187,9 +187,9 @@ superplane canvases change-requests publish <change-request-id> my-canvas
 superplane canvases get my-canvas > canvas.yaml
 # edit canvas.yaml
 # versioning disabled:
-superplane canvases update --file canvas.yaml --auto-layout horizontal
+superplane canvases update --file canvas.yaml
 # versioning enabled:
-superplane canvases update my-canvas --draft --file canvas.yaml --auto-layout horizontal
+superplane canvases update my-canvas --draft --file canvas.yaml
 superplane canvases change-requests create my-canvas --title "Update canvas"
 # if required by approver rules:
 superplane canvases change-requests approve <change-request-id> my-canvas
@@ -201,9 +201,9 @@ If you create a canvas from YAML, apply the same rule:
 ```bash
 superplane canvases create --file canvas.yaml
 # preferred immediately after create (does not require metadata.id in local YAML):
-superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft]
 # use --file only when your local YAML includes metadata.id:
-superplane canvases update --file canvas.yaml --auto-layout horizontal
+superplane canvases update --file canvas.yaml
 ```
 
 Mode rules:
@@ -219,8 +219,8 @@ See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
 Use `canvases update` with auto-layout flags:
 
 Default agent behavior:
-- Always include `--auto-layout horizontal` on `superplane canvases update`.
-- Do not wait for the user to explicitly ask for auto layout.
+- Auto layout is applied by default on `superplane canvases update` when no auto-layout flags are provided.
+- Use `--auto-layout` flags when you need explicit scope/seed-node control.
 - In versioning mode, include `--draft` on update. Draft changes go live only after `canvases change-requests create` and `canvases change-requests publish`.
 
 ```bash
