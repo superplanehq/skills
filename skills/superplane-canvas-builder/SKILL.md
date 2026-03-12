@@ -17,8 +17,8 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | List triggers | `superplane index triggers --from <integration>` |
 | Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
-| Update canvas (versioning disabled) | `superplane canvases update -f canvas.yaml --auto-layout horizontal` |
-| Update draft (versioning enabled) | `superplane canvases update <name-or-id> --draft -f canvas.yaml --auto-layout horizontal` |
+| Update canvas (versioning disabled) | `superplane canvases update -f canvas.yaml` |
+| Update draft (versioning enabled) | `superplane canvases update <name-or-id> --draft -f canvas.yaml` |
 | Create change request (versioning enabled) | `superplane canvases change-requests create [name-or-id] [--title <text>] [--description <text>]` |
 | Publish change request | `superplane canvases change-requests publish <change-request-id> [name-or-id]` |
 
@@ -213,14 +213,14 @@ When a component executes shell commands (e.g., `daytona.executeCommand`, `ssh`)
 ```bash
 superplane canvases create --file canvas.yaml
 # or update an existing canvas:
-superplane canvases update <name-or-id> [--draft] --file canvas.yaml --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft] --file canvas.yaml
 ```
 
-When creating a new canvas from YAML, **always** run a follow-up auto-layout update:
+When creating a new canvas from YAML, run a follow-up update:
 
 ```bash
 superplane canvases create --file canvas.yaml
-superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
+superplane canvases update <name-or-id> [--draft]
 # if --draft was used (versioning mode):
 superplane canvases change-requests create <name-or-id> --title "Initial publish"
 superplane canvases change-requests publish <change-request-id> <name-or-id>
@@ -244,7 +244,7 @@ Before calling the canvas "ready", confirm all of the following:
 
 - Integration IDs resolved from `superplane integrations list`
 - Every `integration-resource` value verified via `superplane integrations list-resources`
-- Canvas created and follow-up auto-layout update applied
+- Canvas created and follow-up update applied
 - If versioning is enabled, change request created/published (or explicitly handed off for approval/publication)
 - `superplane canvases get <name> -o yaml` shows empty `errorMessage` and `warningMessage` on all nodes
 - At least one real trigger run checked, including channel-level `outputs` from critical branching nodes

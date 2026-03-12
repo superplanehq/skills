@@ -4,9 +4,9 @@ Export with `superplane canvases get <name>`, or author from scratch.
 
 > `auto_layout` is an update request option, not a persisted field in canvas YAML.
 > Use `superplane canvases update ... --auto-layout ...` to apply layout.
-> **Agent rule:** Never stop at `create`. Always run an immediate follow-up update with auto-layout:
-> `superplane canvases create ...` then `superplane canvases update ... --auto-layout horizontal` (or `--draft --auto-layout horizontal` when versioning is enabled).
-> **Important:** `superplane canvases update --file canvas.yaml` requires `metadata.id` in that file. Right after `create --file`, prefer `superplane canvases update <name-or-id> --auto-layout horizontal` unless you first export and add `metadata.id`.
+> **Agent rule:** Never stop at `create`. Run a follow-up `update` so server-side defaults (including auto layout) are applied:
+> `superplane canvases create ...` then `superplane canvases update ...` (or `--draft` when versioning is enabled).
+> **Important:** `superplane canvases update --file canvas.yaml` requires `metadata.id` in that file. Right after `create --file`, prefer `superplane canvases update <name-or-id>` unless you first export and add `metadata.id`.
 > **Mode rule:** when versioning is enabled, `superplane canvases update` requires `--draft`. To apply changes live, create and publish a change request (`superplane canvases change-requests create ...` then `superplane canvases change-requests publish ...`).
 
 ## Structure
@@ -276,9 +276,7 @@ superplane canvases update <name-or-id> [--draft] --auto-layout horizontal
 Behavior:
 - `--auto-layout` is required when using scope/node flags.
 - In versioning mode, include `--draft` on update. To apply live, create and publish a change request.
-- Default agent behavior:
-  - Always include `--auto-layout horizontal` when running `superplane canvases update`.
-  - Do not require explicit user prompting for auto layout.
+- Auto layout is applied by default when no auto-layout flags are provided.
 - If scope is omitted:
   - no `--auto-layout-node` => full canvas
   - with `--auto-layout-node` => connected component
