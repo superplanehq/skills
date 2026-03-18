@@ -15,7 +15,7 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Components from integration | `superplane index components --from <integration>` |
 | Describe a component | `superplane index components --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
-| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'` |
+| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
 | Update canvas (versioning disabled) | `superplane canvases update -f canvas.yaml` |
 | Update draft (versioning enabled) | `superplane canvases update <name-or-id> --draft -f canvas.yaml` |
@@ -48,7 +48,7 @@ If connection details are not available, **stop** and ask the user to connect/pr
 Always detect canvas mode before any `canvases update` or `canvases change-requests` command:
 
 ```bash
-superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
+superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'
 ```
 
 Interpretation:

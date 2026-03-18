@@ -13,7 +13,7 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | --- | --- |
 | Connect to org | `superplane connect <URL> <TOKEN>` |
 | Who am I | `superplane whoami` |
-| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'` |
+| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'` |
 | Set active canvas | `superplane canvases active [canvas-id]` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
@@ -79,7 +79,7 @@ superplane whoami
 Always determine mode first, then choose update commands.
 
 ```bash
-superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
+superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'
 ```
 
 Interpretation:

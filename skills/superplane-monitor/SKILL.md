@@ -31,7 +31,7 @@ If `command not found`: stop and tell the user to install the CLI from https://d
 If debugging will require canvas edits, detect mode first:
 
 ```bash
-superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.canvasVersioningEnabled'
+superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'
 ```
 
 - `true`: apply fixes with `superplane canvases update --draft ...`, then create/publish via `superplane canvases change-requests ...`.
