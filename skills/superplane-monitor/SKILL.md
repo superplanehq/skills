@@ -20,13 +20,21 @@ Inspect, debug, and manage workflow executions.
 
 ## Verify CLI Is Installed
 
-Before any debugging, confirm the CLI is available:
+Before any debugging, confirm the CLI binary is available without requiring network access:
+
+```bash
+command -v superplane
+```
+
+If this does not print a path: stop and tell the user to install the CLI from https://docs.superplane.com/installation/cli. Debugging requires the CLI to inspect events, executions, and queues.
+
+Then verify the current session:
 
 ```bash
 superplane whoami
 ```
 
-If `command not found`: stop and tell the user to install the CLI from https://docs.superplane.com/installation/cli. Debugging requires the CLI to inspect events, executions, and queues.
+If `whoami` fails because of authentication, DNS, timeout, or connection issues, the CLI is installed but the session is not usable yet. Tell the user to connect, fix the context, or allow network access as needed before debugging through the CLI.
 
 If debugging will require canvas edits, detect mode first:
 
