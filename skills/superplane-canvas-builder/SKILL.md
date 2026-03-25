@@ -29,10 +29,18 @@ Always follow this sequence. The CLI is the primary path — it gives exact name
 ### 1. Verify CLI and Connect
 
 ```bash
+command -v superplane
+```
+
+If this does not print a path: **stop**. Tell the user to install the CLI from https://docs.superplane.com/installation/cli and re-run the task. Do not attempt to install it on their behalf. Do not silently fall back to doc-based design.
+
+Then verify the current session:
+
+```bash
 superplane whoami
 ```
 
-If `command not found`: **stop**. Tell the user to install the CLI from https://docs.superplane.com/installation/cli and re-run the task. Do not attempt to install it on their behalf. Do not silently fall back to doc-based design.
+If `whoami` fails because of authentication, DNS, timeout, or connection issues, the CLI is installed but the session is not usable yet. Ask the user to connect, fix the context, or allow network access as needed. Do not continue without a working CLI session.
 
 If not yet connected:
 
@@ -216,17 +224,15 @@ superplane canvases create --file canvas.yaml
 superplane canvases update <name-or-id> [--draft] --file canvas.yaml
 ```
 
-When creating a new canvas from YAML, run a follow-up update:
+When creating a new canvas from YAML, `create --file` already applies the graph in the file:
 
 ```bash
 superplane canvases create --file canvas.yaml
-superplane canvases update <name-or-id> [--draft]
-# if --draft was used (versioning mode):
-superplane canvases change-requests create <name-or-id> --title "Initial publish"
-superplane canvases change-requests publish <change-request-id> <name-or-id>
 ```
 
 Mode rules:
+- `superplane canvases create --file canvas.yaml` accepts the resource-style Canvas YAML from the spec (`apiVersion`, `kind`, `metadata`, `spec`).
+- Only run `superplane canvases update ...` after create when you are intentionally applying additional changes, such as a later file that includes `metadata.id`, or explicit auto-layout flags different from the defaults used by create.
 - Versioning enabled: update requires `--draft`; create/publish a change request to apply changes live.
 - Versioning disabled: update applies to live directly (no `--draft`) and `canvases change-requests` is unavailable.
 
@@ -244,7 +250,7 @@ Before calling the canvas "ready", confirm all of the following:
 
 - Integration IDs resolved from `superplane integrations list`
 - Every `integration-resource` value verified via `superplane integrations list-resources`
-- Canvas created and follow-up update applied
+- Canvas created from the intended YAML payload
 - If versioning is enabled, change request created/published (or explicitly handed off for approval/publication)
 - `superplane canvases get <name> -o yaml` shows empty `errorMessage` and `warningMessage` on all nodes
 - At least one real trigger run checked, including channel-level `outputs` from critical branching nodes

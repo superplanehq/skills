@@ -18,7 +18,7 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
 | Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
-| Create canvas from YAML | `superplane canvases create --file canvas.yaml` then mode-aware update (`--draft` when versioning is enabled) |
+| Create canvas from YAML | `superplane canvases create --file canvas.yaml` |
 | Export canvas | `superplane canvases get <name>` |
 | Update canvas in versioning-disabled mode | `superplane canvases update <name-or-id> --file canvas.yaml` |
 | Update draft in versioning-enabled mode | `superplane canvases update <name-or-id> --draft --file canvas.yaml` |
@@ -51,17 +51,27 @@ Operate a SuperPlane instance through the `superplane` CLI.
 
 ## Verify CLI Is Installed
 
-Before any CLI operation, confirm the CLI is available:
+Before any CLI operation, confirm the CLI binary is available without requiring network access:
+
+```bash
+command -v superplane
+```
+
+If this does not print a path, the CLI is **not installed**. Stop and tell the user:
+
+> The SuperPlane CLI is not installed. Install it from https://docs.superplane.com/installation/cli and then re-run this task.
+
+Do **not** attempt to install the CLI on behalf of the user. Do **not** continue with doc-based guesswork — the CLI provides exact trigger names, component names, integration IDs, and config schemas that documentation cannot reliably substitute.
+
+Only after confirming the binary exists should you verify the session:
 
 ```bash
 superplane whoami
 ```
 
-If this returns `command not found`, the CLI is **not installed**. Stop and tell the user:
-
-> The SuperPlane CLI is not installed. Install it from https://docs.superplane.com/installation/cli and then re-run this task.
-
-Do **not** attempt to install the CLI on behalf of the user. Do **not** continue with doc-based guesswork — the CLI provides exact trigger names, component names, integration IDs, and config schemas that documentation cannot reliably substitute.
+Interpret failures carefully:
+- `command not found` from `whoami` still means the CLI is missing.
+- Authentication, DNS, timeout, or connection errors mean the CLI exists but the current session cannot reach SuperPlane yet. In that case, tell the user the CLI is installed but the session/network/auth is not working, and ask them to connect or allow network access as needed.
 
 ## Core Workflow
 
@@ -196,17 +206,15 @@ superplane canvases change-requests approve <change-request-id> my-canvas
 superplane canvases change-requests publish <change-request-id> my-canvas
 ```
 
-If you create a canvas from YAML, apply the same rule:
+If you create a canvas from YAML, `create --file` already sends the full canvas payload. Do not assume a second update is required just to apply the graph:
 
 ```bash
 superplane canvases create --file canvas.yaml
-# preferred immediately after create (does not require metadata.id in local YAML):
-superplane canvases update <name-or-id> [--draft]
-# use --file only when your local YAML includes metadata.id:
-superplane canvases update --file canvas.yaml
 ```
 
 Mode rules:
+- `superplane canvases create --file canvas.yaml` accepts the same resource-style Canvas YAML described in the spec (`apiVersion`, `kind`, `metadata`, `spec`).
+- Run a follow-up `superplane canvases update ...` only when you are intentionally changing the canvas after create, for example to apply additional edits from a file that includes `metadata.id`, or to run auto-layout with different flags than the defaults used on create.
 - **Versioning enabled**: `superplane canvases update ...` must include `--draft`; then create a change request and publish it to apply live.
 - `change-requests publish` requires the change request to be open, non-conflicted, and fully approved by configured approver rules.
 - **Versioning disabled**: `superplane canvases update ...` updates live directly; `canvases change-requests ...` is unavailable.
