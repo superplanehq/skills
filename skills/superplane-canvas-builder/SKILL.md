@@ -16,6 +16,7 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Describe a component | `superplane index components --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
 | Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'` |
+| Generate starter YAML | `superplane canvases init` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
 | Update canvas (versioning disabled) | `superplane canvases update -f canvas.yaml` |
 | Update draft (versioning enabled) | `superplane canvases update <name-or-id> --draft -f canvas.yaml` |
@@ -217,6 +218,16 @@ When a component executes shell commands (e.g., `daytona.executeCommand`, `ssh`)
 - Before shipping, run one manual trigger and inspect node `outputs` in execution YAML to confirm expected channel routing (`success` vs `failed`) matches your edge wiring.
 
 ### 7. Apply
+
+Generate a starter YAML if starting from scratch:
+
+```bash
+superplane canvases init --output-file canvas.yaml
+# or start from a template:
+superplane canvases init --template health-check-monitor --output-file canvas.yaml
+```
+
+Then create from the file or update an existing canvas:
 
 ```bash
 superplane canvases create --file canvas.yaml
