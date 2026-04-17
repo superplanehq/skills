@@ -15,13 +15,9 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Components from integration | `superplane index components --from <integration>` |
 | Describe a component | `superplane index components --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
-| Check versioning mode | `superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'` |
 | Generate starter YAML | `superplane canvases init` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
-| Update canvas (versioning disabled) | `superplane canvases update -f canvas.yaml` |
-| Update draft (versioning enabled) | `superplane canvases update <name-or-id> --draft -f canvas.yaml` |
-| Create change request (versioning enabled) | `superplane canvases change-requests create [name-or-id] [--title <text>] [--description <text>]` |
-| Publish change request | `superplane canvases change-requests publish <change-request-id> [name-or-id]` |
+| Update canvas | `superplane canvases update <name-or-id> --draft -f canvas.yaml` |
 
 ## Order of Operations
 
@@ -52,26 +48,13 @@ superplane whoami
 
 If connection details are not available, **stop** and ask the user to connect/provide the required URL and token. Do not continue without a working CLI session.
 
-### 1b. Detect Canvas Mode (Required Before Apply)
+### 1b. Apply Changes as Drafts
 
-Always detect canvas mode before any `canvases update` or `canvases change-requests` command:
+Versioning is always on in this environment. Skip mode detection and use `--draft` on every `superplane canvases update` command.
 
 ```bash
-superplane canvases get <canvas_name_or_id> -o json | jq '.metadata.versioningEnabled'
+superplane canvases update <name-or-id> --draft --file canvas.yaml
 ```
-
-Interpretation:
-- `true`: effective versioning enabled for this canvas. Use `superplane canvases update --draft ...`, then create/publish via `superplane canvases change-requests ...`.
-- `false`: effective versioning disabled for this canvas. Use `superplane canvases update ...` without `--draft`; do not use `canvases change-requests`.
-
-Behavior-based fallback:
-- `--draft cannot be used when effective canvas versioning is disabled` => versioning disabled.
-- `effective canvas versioning is enabled for this canvas; use --draft` => versioning enabled.
-- `effective canvas versioning is disabled for this canvas` when running `canvases change-requests ...` => change requests unavailable for this canvas.
-
-Org override rule:
-- If organization versioning is enabled, all canvases are effectively versioned.
-- If organization versioning is disabled, each canvas can still enable/disable versioning independently.
 
 ### 2. Understand the Workflow
 
@@ -232,7 +215,7 @@ Then create from the file or update an existing canvas:
 ```bash
 superplane canvases create --file canvas.yaml
 # or update an existing canvas:
-superplane canvases update <name-or-id> [--draft] --file canvas.yaml
+superplane canvases update <name-or-id> --draft --file canvas.yaml
 ```
 
 When creating a new canvas from YAML, `create --file` already applies the graph in the file:
@@ -241,11 +224,10 @@ When creating a new canvas from YAML, `create --file` already applies the graph 
 superplane canvases create --file canvas.yaml
 ```
 
-Mode rules:
+Workflow rules:
 - `superplane canvases create --file canvas.yaml` accepts the resource-style Canvas YAML from the spec (`apiVersion`, `kind`, `metadata`, `spec`).
 - Only run `superplane canvases update ...` after create when you are intentionally applying additional changes, such as a later file that includes `metadata.id`, or explicit auto-layout flags different from the defaults used by create.
-- Versioning enabled: update requires `--draft`; create/publish a change request to apply changes live.
-- Versioning disabled: update applies to live directly (no `--draft`) and `canvases change-requests` is unavailable.
+- In this environment, every `superplane canvases update ...` command should include `--draft`.
 
 Then verify:
 
@@ -262,7 +244,6 @@ Before calling the canvas "ready", confirm all of the following:
 - Integration IDs resolved from `superplane integrations list`
 - Every `integration-resource` value verified via `superplane integrations list-resources`
 - Canvas created from the intended YAML payload
-- If versioning is enabled, change request created/published (or explicitly handed off for approval/publication)
 - `superplane canvases get <name> -o yaml` shows empty `errorMessage` and `warningMessage` on all nodes
 - At least one real trigger run checked, including channel-level `outputs` from critical branching nodes
 
