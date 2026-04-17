@@ -17,6 +17,9 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Set active canvas | `superplane canvases active [canvas-id]` |
 | List/switch contexts | `superplane contexts` |
 | List canvases | `superplane canvases list` |
+| Generate starter YAML | `superplane canvases init` |
+| Generate from template | `superplane canvases init --template <name>` |
+| List canvas templates | `superplane canvases init --list-templates` |
 | Create canvas | `superplane canvases create <name>` then mode-aware update (`--draft` when versioning is enabled) |
 | Create canvas from YAML | `superplane canvases create --file canvas.yaml` |
 | Export canvas | `superplane canvases get <name>` |
@@ -181,9 +184,15 @@ Use `superplane integrations list` first to find valid integration IDs.
 
 ### 3. Build a Canvas Incrementally
 
-Create a blank canvas, then iterate:
+Generate a starter YAML, then create and iterate:
 
 ```bash
+superplane canvases init --output-file canvas.yaml
+# or start from a template:
+superplane canvases init --template health-check-monitor --output-file canvas.yaml
+# edit canvas.yaml, then create:
+superplane canvases create --file canvas.yaml
+# or create a blank canvas and iterate:
 superplane canvases create my-canvas
 # versioning disabled:
 superplane canvases update my-canvas
