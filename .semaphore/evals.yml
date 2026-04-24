@@ -1,0 +1,41 @@
+version: v1.0
+name: "Skills Evals"
+
+# Manual-trigger pipeline — no change_in guards, no auto-run on push.
+# Trigger from the Semaphore UI or via `sem pipeline run`, optionally setting:
+#   EVAL_CASES  comma-separated case names (empty = all)
+#   EVAL_MODEL  anthropic model id (default: claude-haiku-4-5)
+#   EVAL_SKILL  filter to one skill (superplane-cli | superplane-canvas-builder | superplane-monitor)
+
+agent:
+  machine:
+    type: f1-standard-2
+    os_image: ubuntu2204
+
+global_job_config:
+  secrets:
+    - name: anthropic-api-key   # must expose ANTHROPIC_API_KEY
+  env_vars:
+    - { name: EVAL_MODEL, value: "claude-haiku-4-5" }
+    - { name: EVAL_CASES, value: "" }
+    - { name: EVAL_SKILL, value: "" }
+  prologue:
+    commands:
+      - checkout
+      # Semaphore's ubuntu2204 agent has Docker + Compose preinstalled.
+      - docker --version && docker compose version
+
+blocks:
+  - name: "Run Evals"
+    task:
+      jobs:
+        - name: "evals"
+          commands:
+            - 'if [ -n "$EVAL_CASES" ]; then export CASES="$EVAL_CASES"; fi'
+            - 'if [ -n "$EVAL_SKILL" ]; then export SKILL="$EVAL_SKILL"; fi'
+            - make evals
+      epilogue:
+        always:
+          commands:
+            - 'test -d evals/reports && artifact push job evals/reports --destination reports/ || true'
+            - 'test -d tmp && artifact push job tmp --destination logs/ || true'
