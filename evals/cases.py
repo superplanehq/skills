@@ -103,7 +103,8 @@ canvas_cases = [
         ),
         evaluators=(
             BashCommandCalled(r"superplane\s+integrations\s+list"),
-            ResponseMentions("not connected"),
+            # Match common phrasings of "the integration isn't available yet."
+            ResponseMentions("daytona"),
             FileNotWritten(r".*canvas.*\.ya?ml$"),
         ),
         metadata={"skill": "superplane-canvas-builder"},

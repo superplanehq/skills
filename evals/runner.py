@@ -103,6 +103,9 @@ async def main_async(
         logger.close()
     wall_seconds = time.perf_counter() - wall_start
 
+    case_skill_by_name = {
+        c.name: (c.metadata or {}).get("skill", "—") for c in cases
+    }
     builder = ReportBuilder(
         report,
         model=model,
@@ -110,6 +113,7 @@ async def main_async(
         case_names=[c.name for c in cases],
         interaction_log_paths_by_case_name=logger.display_paths_by_case_name,
         output_root=REPORTS_ROOT / run_id,
+        case_skill_by_name=case_skill_by_name,
     )
     summary = builder.render()
     # Exit non-zero if any assertions failed — makes Semaphore/local CI fail-fast.

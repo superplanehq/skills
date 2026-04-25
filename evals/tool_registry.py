@@ -36,11 +36,28 @@ class CaseResult:
     num_turns: int = 0
     """Number of assistant turns (from ResultMessage.num_turns)."""
 
+    input_tokens: int = 0
+    """Input tokens billed (from ResultMessage.usage.input_tokens)."""
+
+    output_tokens: int = 0
+    """Output tokens billed (from ResultMessage.usage.output_tokens)."""
+
+    cache_read_tokens: int = 0
+    """Cache-read tokens (from ResultMessage.usage.cache_read_input_tokens)."""
+
+    cache_write_tokens: int = 0
+    """Cache-creation tokens (from ResultMessage.usage.cache_creation_input_tokens)."""
+
     task_failed: bool = False
     """True if the agent harness raised an exception before producing a final response."""
 
     error_message: str | None = None
     """Populated when task_failed is True."""
+
+    @property
+    def tool_calls(self) -> int:
+        """Total number of tool invocations in this case."""
+        return len(self.tool_uses)
 
     def yaml_files_written(self) -> dict[str, str]:
         """Subset of ``files_written`` whose paths end in .yaml or .yml."""

@@ -12,8 +12,11 @@ from evals.tool_registry import CaseResult
 def _trigger_names(parsed: dict[str, Any]) -> list[str]:
     """Return trigger names from parsed canvas YAML.
 
-    Triggers in canvas-yaml-spec live under ``spec.triggers[*].trigger.name`` or
-    ``spec.nodes[*]`` where node kind == 'trigger'. We check both conventions.
+    Recognizes three shapes:
+      - top-level ``spec.triggers[*].trigger.name`` (or ``spec.triggers[*].name``)
+      - ``spec.nodes[*]`` with ``kind: trigger`` and a ``trigger.name`` / ``component.name``
+      - ``spec.nodes[*]`` with a ``trigger`` key (regardless of ``kind``) — what the
+        real backend's CLI emits today.
     """
     spec = parsed.get("spec") or {}
     names: list[str] = []
@@ -29,11 +32,17 @@ def _trigger_names(parsed: dict[str, Any]) -> list[str]:
     for node in spec.get("nodes") or []:
         if not isinstance(node, dict):
             continue
-        kind = str(node.get("kind", "")).lower()
-        if kind == "trigger":
-            trig = node.get("trigger") or node.get("component") or {}
-            if isinstance(trig, dict):
-                name = trig.get("name")
+        trig = node.get("trigger")
+        if isinstance(trig, dict):
+            name = trig.get("name")
+            if isinstance(name, str) and name:
+                names.append(name)
+                continue
+        # Legacy: kind == trigger with component.name
+        if str(node.get("kind", "")).lower() == "trigger":
+            comp = node.get("component") or {}
+            if isinstance(comp, dict):
+                name = comp.get("name")
                 if isinstance(name, str) and name:
                     names.append(name)
     return names

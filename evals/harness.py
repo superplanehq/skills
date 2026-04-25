@@ -146,6 +146,16 @@ async def run_case(
                 elif isinstance(msg, ResultMessage):
                     result.cost_usd = getattr(msg, "total_cost_usd", None)
                     result.num_turns = getattr(msg, "num_turns", 0) or 0
+                    usage = getattr(msg, "usage", None) or {}
+                    if isinstance(usage, dict):
+                        result.input_tokens = int(usage.get("input_tokens") or 0)
+                        result.output_tokens = int(usage.get("output_tokens") or 0)
+                        result.cache_read_tokens = int(
+                            usage.get("cache_read_input_tokens") or 0
+                        )
+                        result.cache_write_tokens = int(
+                            usage.get("cache_creation_input_tokens") or 0
+                        )
                     if getattr(msg, "is_error", False):
                         result.task_failed = True
                         result.error_message = getattr(msg, "result", None) or "agent error"
