@@ -37,6 +37,7 @@ services:
       EVAL_MODEL: ${EVAL_MODEL:-claude-haiku-4-5}
       EVAL_CASES: ${EVAL_CASES:-}
       EVAL_SKILL: ${EVAL_SKILL:-}
+      EVAL_REPORT_FORMAT: ${EVAL_REPORT_FORMAT:-both}
     volumes:
       # Read-only source mounts.
       - ./skills:/app/skills:ro
