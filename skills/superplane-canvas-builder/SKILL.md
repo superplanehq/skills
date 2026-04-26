@@ -1,6 +1,6 @@
 ---
 name: superplane-canvas-builder
-description: Design and build SuperPlane workflow canvases from requirements. Translates workflow descriptions into canvas YAML with triggers, components, edges, and expressions. Use when the user wants to create a new workflow, build a canvas, design a pipeline, or wire up components. Triggers on "build canvas", "create workflow", "design pipeline", "automate".
+description: Design and build SuperPlane workflow canvases from requirements. Translates workflow descriptions into canvas YAML with triggers, actions, edges, and expressions. Use when the user wants to create a new workflow, build a canvas, design a pipeline, or wire up actions. Triggers on "build canvas", "create workflow", "design pipeline", "automate".
 ---
 
 # SuperPlane Canvas Builder
@@ -11,9 +11,9 @@ Translate workflow requirements into SuperPlane canvas YAML.
 
 | Task | Command |
 | --- | --- |
-| List components | `superplane index components` |
-| Components from integration | `superplane index components --from <integration>` |
-| Describe a component | `superplane index components --name <name>` |
+| List actions | `superplane index actions` |
+| Actions from integration | `superplane index actions --from <integration>` |
+| Describe an action | `superplane index actions --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
 | Generate starter YAML | `superplane canvases init` |
 | Create canvas | `superplane canvases create --file canvas.yaml` |
@@ -61,9 +61,9 @@ superplane canvases update <name-or-id> --draft --file canvas.yaml
 Before running discovery commands, identify what the workflow needs:
 
 - **What starts it?** → trigger (schedule, webhook, GitHub push, manual)
-- **What steps happen?** → each step is a component node
-- **Any decisions?** → If or Filter components for branching
-- **Any waits?** → Approval, Time Gate, Wait components
+- **What steps happen?** → each step is an action node
+- **Any decisions?** → If or Filter actions for branching
+- **Any waits?** → Approval, Time Gate, Wait actions
 - **Which external systems?** → each maps to a provider (e.g., GitHub, Slack, Daytona)
 
 Collect the list of **required providers** from this analysis — you will check them in the next step.
@@ -83,14 +83,14 @@ Do not generate YAML that references providers the org has not connected — it 
 ```bash
 superplane integrations list                          # connected instances → real integration IDs
 superplane index triggers --from <provider>           # exact trigger names
-superplane index components --from <provider>         # exact component names
+superplane index actions --from <provider>         # exact action names
 ```
 
 Inspect required config fields, output channels, and payload shape:
 
 ```bash
 superplane index triggers --name github.onPush --output json
-superplane index components --name semaphore.runWorkflow --output json
+superplane index actions --name semaphore.runWorkflow --output json
 ```
 
 List runtime options for `integration-resource` fields:
@@ -103,12 +103,12 @@ superplane integrations list-resources --id <id> --type <type>
 
 **Schema precedence rule:** if provider reference examples conflict with CLI schema output (`superplane index ... --output json`) or current `list-resources` values, follow CLI output. References are helper material; CLI is source of truth.
 
-### 4. Select Components and Wire the Graph
+### 4. Select Actions and Wire the Graph
 
-Use the **exact** trigger and component names from step 3 — not guesses from documentation.
+Use the **exact** trigger and action names from step 3 — not guesses from documentation.
 
 - If the trigger supports built-in filtering (content filter, action filter, ref filter), configure it at the trigger level. Only add a separate Filter or If node when you need logic the trigger's native config cannot express.
-- Every component needs at least one incoming edge
+- Every action needs at least one incoming edge
 - Triggers have no incoming edges
 - Use named channels for branching (If → `true`/`false`, Approval → `approved`/`rejected`)
 - Filter only emits to `default` when the expression is true; false events stop silently
@@ -153,7 +153,7 @@ For 3+ branches, keep adding 300 to y for each branch and center the source/merg
 
 ### 6. Configure Expressions
 
-> **STOP** before writing any expression that references payload fields you have not confirmed. Do not guess field paths from trigger or component names.
+> **STOP** before writing any expression that references payload fields you have not confirmed. Do not guess field paths from trigger or action names.
 
 #### Envelope
 
@@ -184,7 +184,7 @@ Check these sources in order — use the first one available:
 
 2. **Provider reference files in this skill** — check the `references/` directory for the provider you are using. These contain payload examples and known gotchas.
 
-3. **SuperPlane docs** — fetch the provider's component page from the LLM-friendly docs:
+3. **SuperPlane docs** — fetch the provider's action page from the LLM-friendly docs:
    - Compact index: https://docs.superplane.com/llms.txt
    - Full content: https://docs.superplane.com/llms-full.txt
 
@@ -192,9 +192,9 @@ After the first real execution, always go back to source 1 to verify and correct
 
 ### 6b. Command Node Best Practices
 
-When a component executes shell commands (e.g., `daytona.executeCommand`, `ssh`):
+When an action executes shell commands (e.g., `daytona.executeCommand`, `ssh`):
 
-- **Use the component's native `workingDirectory` / `envVars` config** instead of inline `cd` or `export` in the shell string. This reduces quoting complexity and failure surface.
+- **Use the action's native `workingDirectory` / `envVars` config** instead of inline `cd` or `export` in the shell string. This reduces quoting complexity and failure surface.
 - **Redirect verbose output to a file** and emit a concise status marker to stdout (e.g., `STEP_OK` / `STEP_FAILED`). Large or binary stdout can cause node processing issues.
 - **Check the provider reference file** (`references/` directory) for the shell execution model, hardened command templates, and known failure patterns specific to that integration.
 - For long multi-step scripts, prefer YAML block scalar (`command: |-`) over folded single-line strings to avoid whitespace/newline parse artifacts in `bash -lc`.
@@ -268,7 +268,7 @@ edges:
 ```yaml
 nodes:
   - { id: trigger, ..., position: { x: 120, y: 250 } }
-  - { id: check, ..., component: { name: if }, position: { x: 720, y: 250 } }
+  - { id: check, ..., action: { name: if }, position: { x: 720, y: 250 } }
   - { id: on-true, ..., position: { x: 1320, y: 100 } }
   - { id: on-false, ..., position: { x: 1320, y: 400 } }
 edges:
@@ -284,7 +284,7 @@ Filter only emits to `default` when true. False events stop — no edge needed.
 ```yaml
 nodes:
   - { id: trigger, ..., position: { x: 120, y: 100 } }
-  - { id: filter, ..., component: { name: filter }, position: { x: 720, y: 100 } }
+  - { id: filter, ..., action: { name: filter }, position: { x: 720, y: 100 } }
   - { id: next-step, ..., position: { x: 1320, y: 100 } }
 edges:
   - { sourceId: trigger, targetId: filter, channel: default }
@@ -338,6 +338,6 @@ For agents that can fetch URLs, the full SuperPlane docs are available in LLM-fr
 
 ## References
 
-- [Components & Triggers](references/components-and-triggers.md) — Built-in components and trigger types
-- [GitHub](references/github.md) — Triggers, components, payload examples, gotchas
-- [Daytona](references/daytona.md) — Components, payload examples, gotchas
+- [Actions & Triggers](references/components-and-triggers.md) — Built-in actions and trigger types
+- [GitHub](references/github.md) — Triggers, actions, payload examples, gotchas
+- [Daytona](references/daytona.md) — Actions, payload examples, gotchas
