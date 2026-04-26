@@ -41,8 +41,7 @@ All payloads are wrapped in the SuperPlane envelope: `{ data: {...}, timestamp, 
 - id: run-tests
   name: Run Tests
   type: TYPE_ACTION
-  action:
-    name: daytona.executeCommand
+  component: daytona.executeCommand
   integration:
     id: <daytona-integration-id>
     name: ""

@@ -30,8 +30,7 @@ spec:
 - id: trigger-main
   name: github.onPush
   type: TYPE_TRIGGER
-  trigger:
-    name: github.onPush
+  component: github.onPush
   integration:
     id: <github-integration-id>
     name: ""
@@ -53,8 +52,7 @@ spec:
 - id: component-ci
   name: semaphore.runWorkflow
   type: TYPE_ACTION
-  action:
-    name: semaphore.runWorkflow
+  component: semaphore.runWorkflow
   integration:
     id: <semaphore-integration-id>
     name: ""
@@ -75,8 +73,7 @@ spec:
 - id: approval-gate
   name: approval
   type: TYPE_ACTION
-  action:
-    name: approval
+  component: approval
   configuration: {}
   position:
     x: 1320
@@ -92,8 +89,7 @@ spec:
 | `id` | Yes | Unique ID within the canvas |
 | `name` | Yes | Display name — keep unique to avoid warnings |
 | `type` | Yes | `TYPE_TRIGGER` or `TYPE_ACTION` |
-| `trigger.name` | Triggers | Trigger type (e.g. `github.onPush`) |
-| `action.name` | Actions | Action type (e.g. `semaphore.runWorkflow`) |
+| `component` | Triggers and actions | Node type reference (e.g. `github.onPush`, `semaphore.runWorkflow`) |
 | `integration.id` | Integration nodes | Connected integration instance ID |
 | `integration.name` | No | Can be empty string |
 | `paused` | No | Disable without removing (default: `false`) |
@@ -202,8 +198,7 @@ spec:
     - id: trigger-main
       name: github.onPush
       type: TYPE_TRIGGER
-      trigger:
-        name: github.onPush
+      component: github.onPush
       integration:
         id: <github-integration-id>
         name: ""
@@ -219,8 +214,7 @@ spec:
     - id: component-ci
       name: semaphore.runWorkflow
       type: TYPE_ACTION
-      action:
-        name: semaphore.runWorkflow
+      component: semaphore.runWorkflow
       integration:
         id: <semaphore-integration-id>
         name: ""
@@ -235,8 +229,7 @@ spec:
     - id: approval-gate
       name: approval
       type: TYPE_ACTION
-      action:
-        name: approval
+      component: approval
       configuration: {}
       position: { x: 1320, y: 100 }
       paused: false
