@@ -47,13 +47,13 @@ spec:
   isCollapsed: false
 ```
 
-### Component Node
+### Action Node
 
 ```yaml
 - id: component-ci
   name: semaphore.runWorkflow
-  type: TYPE_COMPONENT
-  component:
+  type: TYPE_ACTION
+  action:
     name: semaphore.runWorkflow
   integration:
     id: <semaphore-integration-id>
@@ -69,13 +69,13 @@ spec:
   isCollapsed: false
 ```
 
-### Built-in Component (no integration)
+### Built-in Action (no integration)
 
 ```yaml
 - id: approval-gate
   name: approval
-  type: TYPE_COMPONENT
-  component:
+  type: TYPE_ACTION
+  action:
     name: approval
   configuration: {}
   position:
@@ -91,9 +91,9 @@ spec:
 | --- | --- | --- |
 | `id` | Yes | Unique ID within the canvas |
 | `name` | Yes | Display name — keep unique to avoid warnings |
-| `type` | Yes | `TYPE_TRIGGER` or `TYPE_COMPONENT` |
+| `type` | Yes | `TYPE_TRIGGER` or `TYPE_ACTION` |
 | `trigger.name` | Triggers | Trigger type (e.g. `github.onPush`) |
-| `component.name` | Components | Component type (e.g. `semaphore.runWorkflow`) |
+| `action.name` | Actions | Action type (e.g. `semaphore.runWorkflow`) |
 | `integration.id` | Integration nodes | Connected integration instance ID |
 | `integration.name` | No | Can be empty string |
 | `paused` | No | Disable without removing (default: `false`) |
@@ -156,7 +156,7 @@ edges:
 
 ### Output Channels
 
-| Component | Channels | Behavior |
+| Action | Channels | Behavior |
 | --- | --- | --- |
 | Filter | `default` | Emits only when true; false events stop silently |
 | If | `true`, `false` | Routes to one of two channels |
@@ -167,7 +167,7 @@ edges:
 Typical gated flow:
 
 ```
-Trigger → Filter (default) → Approval (approved) → Deploy component
+Trigger → Filter (default) → Approval (approved) → Deploy action
 ```
 
 ## Expressions
@@ -218,8 +218,8 @@ spec:
 
     - id: component-ci
       name: semaphore.runWorkflow
-      type: TYPE_COMPONENT
-      component:
+      type: TYPE_ACTION
+      action:
         name: semaphore.runWorkflow
       integration:
         id: <semaphore-integration-id>
@@ -234,8 +234,8 @@ spec:
 
     - id: approval-gate
       name: approval
-      type: TYPE_COMPONENT
-      component:
+      type: TYPE_ACTION
+      action:
         name: approval
       configuration: {}
       position: { x: 1320, y: 100 }
