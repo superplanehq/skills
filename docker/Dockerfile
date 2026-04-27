@@ -8,7 +8,6 @@
 FROM python:3.11-slim
 
 ARG TARGETARCH=amd64
-ARG SUPERPLANE_CLI_VERSION=v0.17.0
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1
@@ -28,8 +27,9 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 # Install Claude Code CLI — claude-agent-sdk spawns this as a subprocess.
 RUN npm install -g @anthropic-ai/claude-code
 
-# Install superplane CLI (pinned version for reproducibility).
-RUN curl -fL "https://github.com/superplanehq/superplane/releases/download/${SUPERPLANE_CLI_VERSION}/superplane-cli-linux-${TARGETARCH}" \
+# Install latest superplane CLI from GitHub releases. The /releases/latest/download/
+# URL is a permanent redirect that always resolves to the most recent release asset.
+RUN curl -fL "https://github.com/superplanehq/superplane/releases/latest/download/superplane-cli-linux-${TARGETARCH}" \
         -o /usr/local/bin/superplane \
     && chmod +x /usr/local/bin/superplane
 
