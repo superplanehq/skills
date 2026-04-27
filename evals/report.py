@@ -1,25 +1,77 @@
 """Console + JSON + Markdown report for eval runs.
 
-Two console formats:
-  - text     : aligned-column-per-case, mirrors superplane/agent/evals/report.py
-  - markdown : single table — Test | Skill | Result | Assertions | Duration | Cost | Tools | In | Out
+Two console formats, selected by ``EVAL_REPORT_FORMAT``:
+  - text     : aligned-column-per-case (mirrors superplane/agent/evals/report.py)
+  - markdown : per-case detail blocks + summary table at the end
+  - both     : text first, then markdown (default)
 
-Selected via the ``EVAL_REPORT_FORMAT`` env var: ``text`` | ``markdown`` | ``both`` (default).
-A ``report.md`` is always written to the run's output directory regardless of console format.
+A ``report.md`` and ``summary.json`` are always written to the run's output dir.
 """
 from __future__ import annotations
 
 import json
 import os
 import re
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Union, cast
+from typing import Any, Literal, Union, cast
 
 from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFailure
 
 from evals.tool_registry import CaseResult
 
+ReportFormat = Literal["text", "markdown", "both"]
+_VALID_FORMATS: frozenset[str] = frozenset({"text", "markdown", "both"})
+
 _ReportRow = Union[ReportCase[Any, Any, Any], ReportCaseFailure[Any, Any, Any]]
+
+
+@dataclass
+class _AssertionLine:
+    text: str
+    passed: bool
+
+
+@dataclass
+class _CaseRow:
+    """Per-case data shared between text and markdown renderers."""
+
+    name: str
+    skill: str
+    passed: bool
+    task_failed: bool
+    error_message: str | None
+    input: str
+    duration_s: float | None
+    cost_usd: float | None
+    tool_calls: int | None
+    input_tokens: int | None
+    output_tokens: int | None
+    cache_read_tokens: int | None
+    cache_write_tokens: int | None
+    n_assertions: int
+    n_passed: int
+    assertion_lines: list[_AssertionLine] = field(default_factory=list)
+    output_path: str = ""
+    log_path: str = ""
+
+
+@dataclass
+class _Totals:
+    task_time_s: float
+    wall_time_s: float
+    tool_calls: int
+    input_tokens: int
+    output_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
+    cost_usd: float | None
+    assertions_total: int
+    assertions_passed: int
+
+    @property
+    def total_time_s(self) -> float:
+        return self.task_time_s + self.wall_time_s
 
 
 class ReportBuilder:
@@ -36,39 +88,25 @@ class ReportBuilder:
     ) -> None:
         self.report = report
         self.model = model
-        self.evaluate_wall_seconds = evaluate_wall_seconds
+        self.wall_seconds = evaluate_wall_seconds
         self.case_names = case_names
-        self.interaction_log_paths_by_case_name = interaction_log_paths_by_case_name or {}
+        self.log_paths = interaction_log_paths_by_case_name or {}
         self.output_root = output_root
-        self.case_skill_by_name = case_skill_by_name or {}
-
-    def _ordered_report_rows(self) -> list[_ReportRow]:
-        by_name: dict[str, _ReportRow] = {}
-        for ok_row in self.report.cases:
-            by_name[ok_row.name] = cast(_ReportRow, ok_row)
-        for fail_row in self.report.failures:
-            by_name[fail_row.name] = cast(_ReportRow, fail_row)
-        return [by_name[name] for name in self.case_names if name in by_name]
+        self.skills = case_skill_by_name or {}
 
     def render(self) -> dict[str, Any]:
-        """Build per-case rows, write JSON + report.md, print to stdout per env format."""
         self.output_root.mkdir(parents=True, exist_ok=True)
-        ordered_rows = self._ordered_report_rows()
-        case_rows, totals, summary = self._collect(ordered_rows)
+        rows, totals, summary = self._collect()
 
-        # Always persist machine-readable artifacts.
         with (self.output_root / "summary.json").open("w", encoding="utf-8") as fh:
             json.dump(summary, fh, indent=2)
-        markdown = self._render_markdown(case_rows, totals)
+        markdown = self._render_markdown(rows, totals)
         with (self.output_root / "report.md").open("w", encoding="utf-8") as fh:
             fh.write(markdown)
 
-        # Console output, per EVAL_REPORT_FORMAT.
-        fmt = (os.environ.get("EVAL_REPORT_FORMAT") or "both").strip().lower()
-        if fmt not in {"text", "markdown", "both"}:
-            fmt = "both"
+        fmt = _resolve_format(os.environ.get("EVAL_REPORT_FORMAT"))
         if fmt in {"text", "both"}:
-            self._print_text(case_rows, totals)
+            self._print_text(rows, totals)
         if fmt in {"markdown", "both"}:
             if fmt == "both":
                 print()
@@ -77,166 +115,157 @@ class ReportBuilder:
 
         return summary
 
-    # ------------------------------------------------------------------ collection
+    # -------- collection --------
 
-    def _collect(
-        self, ordered_rows: list[_ReportRow]
-    ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
-        case_rows: list[dict[str, Any]] = []
-        total_assertions = 0
-        passed_assertions = 0
-        total_cost_usd = 0.0
-        cost_known = False
-        total_tool_calls = 0
-        total_input_tokens = 0
-        total_output_tokens = 0
-        total_cache_read = 0
-        total_cache_write = 0
-        task_time_sum_seconds = 0.0
+    def _ordered_rows(self) -> list[_ReportRow]:
+        by_name: dict[str, _ReportRow] = {}
+        for r in self.report.cases:
+            by_name[r.name] = cast(_ReportRow, r)
+        for r in self.report.failures:
+            by_name[r.name] = cast(_ReportRow, r)
+        return [by_name[n] for n in self.case_names if n in by_name]
 
-        for case_result in ordered_rows:
-            case_name = case_result.name
-            safe = re.sub(r"[^A-Za-z0-9_.-]", "_", case_name)
-            output_json_path = self.output_root / f"{safe}.json"
-
-            if isinstance(case_result, ReportCaseFailure):
-                serialized = {
-                    "__task_failed__": True,
-                    "error_message": case_result.error_message,
-                }
-                output: CaseResult | None = None
-                duration_seconds: float | None = None
-            else:
-                output = case_result.output  # type: ignore[assignment]
-                serialized = _serialize_case_result(output)
-                duration_seconds = output.duration_s
-
-            with output_json_path.open("w", encoding="utf-8") as fh:
-                json.dump(serialized, fh, indent=2, default=str)
-
-            assertion_values = self._get_assertion_values(case_result)
-            assertion_lines = self._format_assertion_lines(case_result)
-            n_assertions = len(assertion_values)
-            n_passed = sum(1 for a in assertion_values if bool(getattr(a, "value", False)))
-            total_assertions += n_assertions
-            passed_assertions += n_passed
-
-            case_passed = (
-                output is not None
-                and not output.task_failed
-                and n_assertions > 0
-                and n_passed == n_assertions
-            )
-
-            if output is not None:
-                total_tool_calls += output.tool_calls
-                total_input_tokens += output.input_tokens
-                total_output_tokens += output.output_tokens
-                total_cache_read += output.cache_read_tokens
-                total_cache_write += output.cache_write_tokens
-                if output.cost_usd is not None:
-                    total_cost_usd += output.cost_usd
-                    cost_known = True
-            if duration_seconds is not None:
-                task_time_sum_seconds += duration_seconds
-
-            case_rows.append({
-                "name": case_name,
-                "skill": self.case_skill_by_name.get(case_name, "—"),
-                "passed": case_passed,
-                "task_failed": output.task_failed if output else False,
-                "error_message": (output.error_message if output else None)
-                                 or (case_result.error_message
-                                     if isinstance(case_result, ReportCaseFailure) else None),
-                "input": getattr(case_result, "inputs", "-"),
-                "duration_s": duration_seconds,
-                "cost_usd": output.cost_usd if output else None,
-                "tool_calls": output.tool_calls if output else None,
-                "input_tokens": output.input_tokens if output else None,
-                "output_tokens": output.output_tokens if output else None,
-                "cache_read_tokens": output.cache_read_tokens if output else None,
-                "cache_write_tokens": output.cache_write_tokens if output else None,
-                "n_assertions": n_assertions,
-                "n_passed": n_passed,
-                "assertion_lines": assertion_lines,
-                "output_path": str(output_json_path),
-                "log_path": self.interaction_log_paths_by_case_name.get(case_name, "-"),
-            })
-
-        totals = {
-            "task_time_sum_seconds": task_time_sum_seconds,
-            "wall_time_seconds": self.evaluate_wall_seconds,
-            "tool_calls": total_tool_calls,
-            "input_tokens": total_input_tokens,
-            "output_tokens": total_output_tokens,
-            "cache_read_tokens": total_cache_read,
-            "cache_write_tokens": total_cache_write,
-            "cost_usd": round(total_cost_usd, 6) if cost_known else None,
-            "assertions_total": total_assertions,
-            "assertions_passed": passed_assertions,
+    def _collect(self) -> tuple[list[_CaseRow], _Totals, dict[str, Any]]:
+        rows: list[_CaseRow] = []
+        agg = {
+            "assertions_total": 0, "assertions_passed": 0,
+            "tool_calls": 0, "input_tokens": 0, "output_tokens": 0,
+            "cache_read_tokens": 0, "cache_write_tokens": 0,
+            "task_time_s": 0.0, "cost_usd": 0.0, "cost_known": False,
         }
+
+        for case_result in self._ordered_rows():
+            row = self._build_row(case_result)
+            self._persist_case_json(row, case_result)
+            agg["assertions_total"] += row.n_assertions
+            agg["assertions_passed"] += row.n_passed
+            if row.tool_calls is not None:
+                agg["tool_calls"] += row.tool_calls
+                agg["input_tokens"] += row.input_tokens or 0
+                agg["output_tokens"] += row.output_tokens or 0
+                agg["cache_read_tokens"] += row.cache_read_tokens or 0
+                agg["cache_write_tokens"] += row.cache_write_tokens or 0
+            if row.cost_usd is not None:
+                agg["cost_usd"] += row.cost_usd
+                agg["cost_known"] = True
+            if row.duration_s is not None:
+                agg["task_time_s"] += row.duration_s
+            rows.append(row)
+
+        totals = _Totals(
+            task_time_s=agg["task_time_s"],
+            wall_time_s=self.wall_seconds,
+            tool_calls=agg["tool_calls"],
+            input_tokens=agg["input_tokens"],
+            output_tokens=agg["output_tokens"],
+            cache_read_tokens=agg["cache_read_tokens"],
+            cache_write_tokens=agg["cache_write_tokens"],
+            cost_usd=round(agg["cost_usd"], 6) if agg["cost_known"] else None,
+            assertions_total=agg["assertions_total"],
+            assertions_passed=agg["assertions_passed"],
+        )
         summary = {
             "model": self.model,
-            "cases_total": len(case_rows),
-            "cases_passed": sum(1 for r in case_rows if r["passed"]),
-            "assertions_total": total_assertions,
-            "assertions_passed": passed_assertions,
-            "task_time_sum_seconds": round(task_time_sum_seconds, 3),
-            "wall_time_seconds": round(self.evaluate_wall_seconds, 3),
+            "cases_total": len(rows),
+            "cases_passed": sum(1 for r in rows if r.passed),
+            "assertions_total": totals.assertions_total,
+            "assertions_passed": totals.assertions_passed,
+            "task_time_sum_seconds": round(totals.task_time_s, 3),
+            "wall_time_seconds": round(totals.wall_time_s, 3),
             "totals": {
-                "tool_calls": total_tool_calls,
-                "input_tokens": total_input_tokens,
-                "output_tokens": total_output_tokens,
-                "cache_read_tokens": total_cache_read,
-                "cache_write_tokens": total_cache_write,
-                "cost_usd": round(total_cost_usd, 6) if cost_known else None,
+                "tool_calls": totals.tool_calls,
+                "input_tokens": totals.input_tokens,
+                "output_tokens": totals.output_tokens,
+                "cache_read_tokens": totals.cache_read_tokens,
+                "cache_write_tokens": totals.cache_write_tokens,
+                "cost_usd": totals.cost_usd,
             },
-            "per_case": [
-                {k: r[k] for k in (
-                    "name", "skill", "passed", "duration_s", "cost_usd", "tool_calls",
-                    "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens",
-                    "n_assertions", "n_passed",
-                )}
-                for r in case_rows
-            ],
-            "logs_by_case": self.interaction_log_paths_by_case_name,
+            "per_case": [_summary_case(r) for r in rows],
+            "logs_by_case": self.log_paths,
         }
-        return case_rows, totals, summary
+        return rows, totals, summary
 
-    # ------------------------------------------------------------------ text format
+    def _build_row(self, case_result: _ReportRow) -> _CaseRow:
+        name = case_result.name
+        assertions = _assertion_values(case_result)
+        n_assertions = len(assertions)
+        n_passed = sum(1 for a in assertions if bool(getattr(a, "value", False)))
 
-    def _print_text(self, case_rows: list[dict[str, Any]], totals: dict[str, Any]) -> None:
-        print()
-        for i, row in enumerate(case_rows):
-            duration_display = (
-                f"{row['duration_s']:.1f}s" if row["duration_s"] is not None else "-"
+        if isinstance(case_result, ReportCaseFailure):
+            return _CaseRow(
+                name=name,
+                skill=self.skills.get(name, "—"),
+                passed=False,
+                task_failed=True,
+                error_message=case_result.error_message,
+                input=getattr(case_result, "inputs", "-"),
+                duration_s=None,
+                cost_usd=None,
+                tool_calls=None,
+                input_tokens=None,
+                output_tokens=None,
+                cache_read_tokens=None,
+                cache_write_tokens=None,
+                n_assertions=n_assertions,
+                n_passed=n_passed,
+                output_path=str(self.output_root / f"{_safe_filename(name)}.json"),
+                log_path=self.log_paths.get(name, "-"),
             )
-            print(f"{row['name']} {duration_display}")
-            print(f"  {'input:':<13} {row['input']}")
-            print(f"  {'output:':<13} {row['output_path']}")
-            print(f"  {'log:':<13} {row['log_path']}")
-            if row["tool_calls"] is None:
-                print(f"  {'toolCalls:':<13} -")
-                print(f"  {'inputTokens:':<13} -")
-                print(f"  {'outputTokens:':<13} -")
-                print(f"  {'cacheRead:':<13} -")
-                print(f"  {'cacheWrite:':<13} -")
-                print(f"  {'cost:':<13} -")
-                if row["error_message"]:
-                    print(f"  {'error:':<13} {row['error_message']}")
-            else:
-                print(f"  {'toolCalls:':<13} {row['tool_calls']}")
-                print(f"  {'inputTokens:':<13} {row['input_tokens']}")
-                print(f"  {'outputTokens:':<13} {row['output_tokens']}")
-                print(f"  {'cacheRead:':<13} {row['cache_read_tokens']}")
-                print(f"  {'cacheWrite:':<13} {row['cache_write_tokens']}")
-                print(f"  {'cost:':<13} {_format_cost(row['cost_usd'])}")
+
+        output: CaseResult = case_result.output  # type: ignore[assignment]
+        return _CaseRow(
+            name=name,
+            skill=self.skills.get(name, "—"),
+            passed=not output.task_failed and n_assertions > 0 and n_passed == n_assertions,
+            task_failed=output.task_failed,
+            error_message=output.error_message,
+            input=getattr(case_result, "inputs", "-"),
+            duration_s=output.duration_s,
+            cost_usd=output.cost_usd,
+            tool_calls=output.tool_calls,
+            input_tokens=output.input_tokens,
+            output_tokens=output.output_tokens,
+            cache_read_tokens=output.cache_read_tokens,
+            cache_write_tokens=output.cache_write_tokens,
+            n_assertions=n_assertions,
+            n_passed=n_passed,
+            assertion_lines=[_assertion_line(a) for a in assertions],
+            output_path=str(self.output_root / f"{_safe_filename(name)}.json"),
+            log_path=self.log_paths.get(name, "-"),
+        )
+
+    def _persist_case_json(self, row: _CaseRow, case_result: _ReportRow) -> None:
+        if isinstance(case_result, ReportCaseFailure):
+            payload: dict[str, Any] = {
+                "__task_failed__": True,
+                "error_message": case_result.error_message,
+            }
+        else:
+            payload = _serialize_case_result(case_result.output)  # type: ignore[arg-type]
+        with Path(row.output_path).open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2, default=str)
+
+    # -------- text format --------
+
+    def _print_text(self, rows: list[_CaseRow], totals: _Totals) -> None:
+        print()
+        for i, row in enumerate(rows):
+            duration = f"{row.duration_s:.1f}s" if row.duration_s is not None else "-"
+            print(f"{row.name} {duration}")
+            print(f"  {'input:':<13} {row.input}")
+            print(f"  {'output:':<13} {row.output_path}")
+            print(f"  {'log:':<13} {row.log_path}")
+            for label, value in _metric_pairs(row):
+                print(f"  {label:<13} {value}")
+            if row.task_failed and row.error_message:
+                print(f"  {'error:':<13} {row.error_message}")
             print(f"  {'assertions:':<13}")
-            if not row["assertion_lines"]:
+            if not row.assertion_lines:
                 print("    - none")
-            for line in row["assertion_lines"]:
-                print(f"    - {line}")
-            if i < len(case_rows) - 1:
+            for line in row.assertion_lines:
+                status = "passed" if line.passed else "failed"
+                print(f"    - {line.text} [{status}]")
+            if i < len(rows) - 1:
                 print()
                 print()
 
@@ -244,151 +273,178 @@ class ReportBuilder:
         print()
         print("================================================")
         print()
-        total_time = totals["task_time_sum_seconds"] + totals["wall_time_seconds"]
-        print(f"{'totalTime:':<13} {total_time:.1f}s")
-        print(f"{'totalCost:':<13} {_format_cost(totals['cost_usd'])}")
-        print(f"{'toolCalls:':<13} {totals['tool_calls']}")
-        print(f"{'inputTokens:':<13} {totals['input_tokens']}")
-        print(f"{'outputTokens:':<13} {totals['output_tokens']}")
+        print(f"{'totalTime:':<13} {totals.total_time_s:.1f}s")
+        print(f"{'totalCost:':<13} {_format_cost(totals.cost_usd)}")
+        print(f"{'toolCalls:':<13} {totals.tool_calls}")
+        print(f"{'inputTokens:':<13} {totals.input_tokens}")
+        print(f"{'outputTokens:':<13} {totals.output_tokens}")
         print()
-        print(f"{totals['assertions_passed']}/{totals['assertions_total']} assertions passed")
+        print(f"{totals.assertions_passed}/{totals.assertions_total} assertions passed")
 
-    # ------------------------------------------------------------------ markdown format
+    # -------- markdown format --------
 
-    def _render_markdown(
-        self, case_rows: list[dict[str, Any]], totals: dict[str, Any]
-    ) -> str:
-        """Per-case detail blocks first, summary table at the end."""
+    def _render_markdown(self, rows: list[_CaseRow], totals: _Totals) -> str:
         lines: list[str] = []
-        cases_passed = sum(1 for r in case_rows if r["passed"])
-        cases_total = len(case_rows)
-        total_time = totals["task_time_sum_seconds"] + totals["wall_time_seconds"]
+        cases_passed = sum(1 for r in rows if r.passed)
+        cases_total = len(rows)
 
-        lines.append("# 🧪 Skills Evals — Run Report")
-        lines.append("")
-        lines.append(f"- **Model:** `{self.model}`")
-        lines.append(f"- **Run:** `{self.output_root.name}`")
-        lines.append("")
+        lines += [
+            "# 🧪 Skills Evals — Run Report",
+            "",
+            f"- **Model:** `{self.model}`",
+            f"- **Run:** `{self.output_root.name}`",
+            "",
+            "## Cases",
+            "",
+        ]
+        for row in rows:
+            lines += self._render_case_block(row)
 
-        # ------- per-case detail blocks -------
-        lines.append("## Cases")
-        lines.append("")
-        for row in case_rows:
-            status = "✅ Pass" if row["passed"] else "❌ Fail"
-            duration = f"{row['duration_s']:.1f}s" if row["duration_s"] is not None else "—"
-            cost = _format_cost(row["cost_usd"])
-
-            lines.append(f"### `{row['name']}` — {status}  ·  {duration}  ·  {cost}")
-            lines.append("")
-            lines.append(f"- **Skill:** `{row['skill']}`")
-            lines.append(f"- **Input:** {row['input']}")
-            lines.append(f"- **Output:** `{row['output_path']}`")
-            lines.append(f"- **Log:** `{row['log_path']}`")
-            lines.append("")
-
-            # Per-case metrics table.
-            if row["tool_calls"] is None:
-                lines.append("| toolCalls | inputTokens | outputTokens | cacheRead | cacheWrite | cost |")
-                lines.append("| ---: | ---: | ---: | ---: | ---: | ---: |")
-                lines.append("| — | — | — | — | — | — |")
-                if row["error_message"]:
-                    lines.append("")
-                    lines.append(f"**Task error:** `{row['error_message']}`")
-            else:
-                lines.append(
-                    "| toolCalls | inputTokens | outputTokens | cacheRead | cacheWrite | cost |"
-                )
-                lines.append("| ---: | ---: | ---: | ---: | ---: | ---: |")
-                lines.append(
-                    f"| {row['tool_calls']} | {row['input_tokens']} | {row['output_tokens']} | "
-                    f"{row['cache_read_tokens']} | {row['cache_write_tokens']} | {cost} |"
-                )
-            lines.append("")
-
-            # Assertions checklist.
-            lines.append(f"**Assertions ({row['n_passed']}/{row['n_assertions']}):**")
-            lines.append("")
-            if not row["assertion_lines"]:
-                lines.append("- _none_")
-            else:
-                for line in row["assertion_lines"]:
-                    marker = "✅" if " passed " in f" {line} " else "❌"
-                    lines.append(f"- {marker} {line}")
-            lines.append("")
-            lines.append("---")
-            lines.append("")
-
-        # ------- summary at end -------
-        lines.append("## 📊 Summary")
-        lines.append("")
-        lines.append(
+        lines += [
+            "## 📊 Summary",
+            "",
             f"- **Cases:** {cases_passed}/{cases_total} passed"
-            f"  ·  **Assertions:** {totals['assertions_passed']}/{totals['assertions_total']} passed"
-        )
-        lines.append(
-            f"- **Total time:** {total_time:.1f}s"
-            f"  ·  **Total cost:** {_format_cost(totals['cost_usd'])}"
-            f"  ·  **Tool calls:** {totals['tool_calls']}"
-            f"  ·  **Tokens (in/out):** {totals['input_tokens']}/{totals['output_tokens']}"
-        )
+            f"  ·  **Assertions:** {totals.assertions_passed}/{totals.assertions_total} passed",
+            f"- **Total time:** {totals.total_time_s:.1f}s"
+            f"  ·  **Total cost:** {_format_cost(totals.cost_usd)}"
+            f"  ·  **Tool calls:** {totals.tool_calls}"
+            f"  ·  **Tokens (in/out):** {totals.input_tokens}/{totals.output_tokens}",
+            "",
+            "| 🧩 Test | 🛠️ Skill | ✅ Result | Assertions | Duration | Cost | Tools | InTok | OutTok |",
+            "| --- | --- | :---: | :---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+        lines += [_summary_row(r) for r in rows]
+        lines.append(_summary_total_row(cases_passed, cases_total, totals))
         lines.append("")
-        lines.append(
-            "| 🧩 Test | 🛠️ Skill | ✅ Result | Assertions | Duration | Cost | Tools | InTok | OutTok |"
-        )
-        lines.append(
-            "| --- | --- | :---: | :---: | ---: | ---: | ---: | ---: | ---: |"
-        )
-        for row in case_rows:
-            result = "✅ Pass" if row["passed"] else "❌ Fail"
-            duration = f"{row['duration_s']:.1f}s" if row["duration_s"] is not None else "—"
-            cost = _format_cost(row["cost_usd"])
-            tools = str(row["tool_calls"]) if row["tool_calls"] is not None else "—"
-            in_tok = str(row["input_tokens"]) if row["input_tokens"] is not None else "—"
-            out_tok = str(row["output_tokens"]) if row["output_tokens"] is not None else "—"
-            assertions_cell = f"{row['n_passed']}/{row['n_assertions']}" if row["n_assertions"] else "—"
-            skill = row["skill"] or "—"
-            lines.append(
-                f"| `{row['name']}` | {skill} | {result} | "
-                f"{assertions_cell} | {duration} | {cost} | "
-                f"{tools} | {in_tok} | {out_tok} |"
-            )
-        lines.append(
-            f"| **Total** | — | "
-            f"**{cases_passed}/{cases_total}** | "
-            f"**{totals['assertions_passed']}/{totals['assertions_total']}** | "
-            f"**{total_time:.1f}s** | "
-            f"**{_format_cost(totals['cost_usd'])}** | "
-            f"**{totals['tool_calls']}** | "
-            f"**{totals['input_tokens']}** | "
-            f"**{totals['output_tokens']}** |"
-        )
-        lines.append("")
-
         return "\n".join(lines)
 
-    def _get_assertion_values(self, case_result: Any) -> list[Any]:
-        assertions = getattr(case_result, "assertions", None)
-        if assertions is None:
-            return []
-        if isinstance(assertions, dict):
-            return list(assertions.values())
-        try:
-            return list(assertions)
-        except TypeError:
-            return []
+    def _render_case_block(self, row: _CaseRow) -> list[str]:
+        status = "✅ Pass" if row.passed else "❌ Fail"
+        duration = f"{row.duration_s:.1f}s" if row.duration_s is not None else "—"
+        cost = _format_cost(row.cost_usd)
+        block = [
+            f"### `{row.name}` — {status}  ·  {duration}  ·  {cost}",
+            "",
+            f"- **Skill:** `{row.skill}`",
+            f"- **Input:** {row.input}",
+            f"- **Output:** `{row.output_path}`",
+            f"- **Log:** `{row.log_path}`",
+            "",
+            "| toolCalls | inputTokens | outputTokens | cacheRead | cacheWrite | cost |",
+            "| ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+        if row.tool_calls is None:
+            block.append("| — | — | — | — | — | — |")
+            if row.error_message:
+                block += ["", f"**Task error:** `{row.error_message}`"]
+        else:
+            block.append(
+                f"| {row.tool_calls} | {row.input_tokens} | {row.output_tokens} | "
+                f"{row.cache_read_tokens} | {row.cache_write_tokens} | {cost} |"
+            )
+        block += ["", f"**Assertions ({row.n_passed}/{row.n_assertions}):**", ""]
+        if not row.assertion_lines:
+            block.append("- _none_")
+        else:
+            for line in row.assertion_lines:
+                marker = "✅" if line.passed else "❌"
+                block.append(f"- {marker} {line.text}")
+        block += ["", "---", ""]
+        return block
 
-    def _format_assertion_lines(self, case_result: Any) -> list[str]:
-        lines: list[str] = []
-        for assertion in self._get_assertion_values(case_result):
-            name = getattr(assertion, "name", "assertion")
-            passed = bool(getattr(assertion, "value", False))
-            reason = getattr(assertion, "reason", None)
-            status = "passed" if passed else "failed"
-            line = f"{name}: {status}"
-            if reason:
-                line = f"{line} - {reason}"
-            lines.append(line)
-        return lines
+
+# -------- helpers --------
+
+def _resolve_format(raw: str | None) -> ReportFormat:
+    fmt = (raw or "both").strip().lower()
+    return cast(ReportFormat, fmt if fmt in _VALID_FORMATS else "both")
+
+
+def _safe_filename(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+
+
+def _assertion_values(case_result: Any) -> list[Any]:
+    assertions = getattr(case_result, "assertions", None)
+    if assertions is None:
+        return []
+    if isinstance(assertions, dict):
+        return list(assertions.values())
+    try:
+        return list(assertions)
+    except TypeError:
+        return []
+
+
+def _assertion_line(assertion: Any) -> _AssertionLine:
+    name = getattr(assertion, "name", "assertion")
+    passed = bool(getattr(assertion, "value", False))
+    reason = getattr(assertion, "reason", None)
+    status = "passed" if passed else "failed"
+    text = f"{name}: {status}"
+    if reason:
+        text = f"{text} - {reason}"
+    return _AssertionLine(text=text, passed=passed)
+
+
+def _metric_pairs(row: _CaseRow) -> list[tuple[str, str]]:
+    if row.tool_calls is None:
+        return [
+            ("toolCalls:", "-"),
+            ("inputTokens:", "-"),
+            ("outputTokens:", "-"),
+            ("cacheRead:", "-"),
+            ("cacheWrite:", "-"),
+            ("cost:", "-"),
+        ]
+    return [
+        ("toolCalls:", str(row.tool_calls)),
+        ("inputTokens:", str(row.input_tokens)),
+        ("outputTokens:", str(row.output_tokens)),
+        ("cacheRead:", str(row.cache_read_tokens)),
+        ("cacheWrite:", str(row.cache_write_tokens)),
+        ("cost:", _format_cost(row.cost_usd)),
+    ]
+
+
+def _summary_row(row: _CaseRow) -> str:
+    result = "✅ Pass" if row.passed else "❌ Fail"
+    duration = f"{row.duration_s:.1f}s" if row.duration_s is not None else "—"
+    cost = _format_cost(row.cost_usd)
+    tools = str(row.tool_calls) if row.tool_calls is not None else "—"
+    in_tok = str(row.input_tokens) if row.input_tokens is not None else "—"
+    out_tok = str(row.output_tokens) if row.output_tokens is not None else "—"
+    asserts = f"{row.n_passed}/{row.n_assertions}" if row.n_assertions else "—"
+    return (
+        f"| `{row.name}` | {row.skill} | {result} | {asserts} | "
+        f"{duration} | {cost} | {tools} | {in_tok} | {out_tok} |"
+    )
+
+
+def _summary_total_row(passed: int, total: int, totals: _Totals) -> str:
+    return (
+        f"| **Total** | — | **{passed}/{total}** | "
+        f"**{totals.assertions_passed}/{totals.assertions_total}** | "
+        f"**{totals.total_time_s:.1f}s** | **{_format_cost(totals.cost_usd)}** | "
+        f"**{totals.tool_calls}** | **{totals.input_tokens}** | **{totals.output_tokens}** |"
+    )
+
+
+def _summary_case(row: _CaseRow) -> dict[str, Any]:
+    return {
+        "name": row.name,
+        "skill": row.skill,
+        "passed": row.passed,
+        "duration_s": row.duration_s,
+        "cost_usd": row.cost_usd,
+        "tool_calls": row.tool_calls,
+        "input_tokens": row.input_tokens,
+        "output_tokens": row.output_tokens,
+        "cache_read_tokens": row.cache_read_tokens,
+        "cache_write_tokens": row.cache_write_tokens,
+        "n_assertions": row.n_assertions,
+        "n_passed": row.n_passed,
+    }
 
 
 def _serialize_case_result(output: CaseResult) -> dict[str, Any]:
@@ -410,13 +466,11 @@ def _serialize_case_result(output: CaseResult) -> dict[str, Any]:
     }
 
 
-def _truncate(s: str, limit: int = 8000) -> str:
+def _truncate(s: Any, limit: int = 8000) -> Any:
     if not isinstance(s, str):
         return s
     return s if len(s) <= limit else s[:limit] + f"... [truncated {len(s) - limit} chars]"
 
 
 def _format_cost(value: float | None) -> str:
-    if value is None:
-        return "-"
-    return f"${value:.4f}"
+    return "-" if value is None else f"${value:.4f}"

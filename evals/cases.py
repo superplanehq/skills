@@ -1,7 +1,7 @@
 """Eval cases for the three SuperPlane skills.
 
-Each Case has ``metadata.skill`` so the runner can filter with ``--skill <name>``.
-Cases that need the CLI to appear uninstalled set ``metadata.strip_cli=True``.
+Each case carries ``metadata.skill`` for filtering. Cases that should run with
+the CLI absent (i.e. ``command -v superplane`` fails) set ``metadata.strip_cli``.
 """
 from __future__ import annotations
 
@@ -20,13 +20,19 @@ from evals.evaluators import (
     YamlValidatesCanvas,
 )
 
-# ---------- superplane-cli ----------
-cli_cases = [
+
+def _tagged(skill: str, cases: list[Case]) -> list[Case]:
+    """Set or merge ``metadata.skill`` on each case."""
+    for c in cases:
+        c.metadata = {"skill": skill, **(c.metadata or {})}
+    return cases
+
+
+cli_cases = _tagged("superplane-cli", [
     Case(
         name="whoami_basic",
         inputs="Check which SuperPlane org I'm currently connected to, then tell me the result.",
         evaluators=(BashCommandCalled(r"superplane\s+whoami"),),
-        metadata={"skill": "superplane-cli"},
     ),
     Case(
         name="list_components_github",
@@ -35,7 +41,6 @@ cli_cases = [
             "Run the CLI, then summarize what you find."
         ),
         evaluators=(BashCommandCalled(r"superplane\s+index\s+components\s+--from\s+github"),),
-        metadata={"skill": "superplane-cli"},
     ),
     Case(
         name="missing_cli_refusal",
@@ -44,36 +49,33 @@ cli_cases = [
             RefusedBecauseMissingCli(),
             BashCommandNotCalled(r"superplane\s+canvases\s+create"),
         ),
-        metadata={"skill": "superplane-cli", "strip_cli": True},
+        metadata={"strip_cli": True},
     ),
     Case(
         name="connect_flow",
         inputs="Connect me to the SuperPlane instance at https://sp.example.com with token abc123.",
         evaluators=(
-            BashCommandsInOrder(
-                patterns=[r"superplane\s+connect\s+https://sp\.example\.com", r"superplane\s+whoami"]
-            ),
+            BashCommandsInOrder(patterns=[
+                r"superplane\s+connect\s+https://sp\.example\.com",
+                r"superplane\s+whoami",
+            ]),
         ),
-        metadata={"skill": "superplane-cli"},
     ),
     Case(
         name="describe_trigger",
         inputs=(
-            "Inspect the github.onPush trigger schema via the CLI and report its configuration fields "
-            "and payload shape."
+            "Inspect the github.onPush trigger schema via the CLI and report its configuration "
+            "fields and payload shape."
         ),
-        evaluators=(
-            BashCommandCalled(r"superplane\s+index\s+triggers\s+--name\s+github\.onPush"),
-        ),
-        metadata={"skill": "superplane-cli"},
+        evaluators=(BashCommandCalled(r"superplane\s+index\s+triggers\s+--name\s+github\.onPush"),),
     ),
-]
+])
 
-# ---------- superplane-canvas-builder ----------
-# No integrations are connected on the clean demo; agents should produce well-formed
-# canvas YAMLs that *reference* integration components, even if the backend would
-# reject the create. Evaluators validate YAML shape only.
-canvas_cases = [
+
+# No integrations are connected on the clean demo. Cases here test that the agent
+# produces a well-formed YAML referencing components by exact name (the backend
+# may reject the apply, which is fine — we only validate YAML shape).
+canvas_cases = _tagged("superplane-canvas-builder", [
     Case(
         name="push_to_slack",
         inputs=(
@@ -83,31 +85,24 @@ canvas_cases = [
             "so just produce a correct YAML that could be applied later."
         ),
         evaluators=(
-            BashCommandsInOrder(
-                patterns=[
-                    r"superplane\s+integrations\s+list",
-                    r"superplane\s+index\s+components\s+--from\s+slack",
-                ]
-            ),
+            BashCommandsInOrder(patterns=[
+                r"superplane\s+integrations\s+list",
+                r"superplane\s+index\s+components\s+--from\s+slack",
+            ]),
             FileWritten(r".*\.ya?ml$"),
             YamlValidatesCanvas(),
             CanvasHasTrigger("github.onPush"),
             CanvasHasNode("slack.sendTextMessage"),
         ),
-        metadata={"skill": "superplane-canvas-builder"},
     ),
     Case(
         name="missing_integration_refusal",
-        inputs=(
-            "Create a canvas that uses Daytona to spin up an ephemeral sandbox on every PR open."
-        ),
+        inputs="Create a canvas that uses Daytona to spin up an ephemeral sandbox on every PR open.",
         evaluators=(
             BashCommandCalled(r"superplane\s+integrations\s+list"),
-            # Match common phrasings of "the integration isn't available yet."
             ResponseMentions("daytona"),
             FileNotWritten(r".*canvas.*\.ya?ml$"),
         ),
-        metadata={"skill": "superplane-canvas-builder"},
     ),
     Case(
         name="starter_from_template",
@@ -115,15 +110,11 @@ canvas_cases = [
         evaluators=(
             BashCommandCalled(r"superplane\s+canvases\s+init\s+--template\s+health-check-monitor"),
         ),
-        metadata={"skill": "superplane-canvas-builder"},
     ),
     Case(
         name="draft_update_flag",
         inputs="Update canvas my-canvas to add a manual approval step before deploy.",
-        evaluators=(
-            BashCommandCalled(r"superplane\s+canvases\s+update\s+[^\s]+\s+--draft"),
-        ),
-        metadata={"skill": "superplane-canvas-builder"},
+        evaluators=(BashCommandCalled(r"superplane\s+canvases\s+update\s+[^\s]+\s+--draft"),),
     ),
     Case(
         name="resource_verification",
@@ -133,21 +124,19 @@ canvas_cases = [
             "nothing is connected yet, and write canvas.yaml."
         ),
         evaluators=(
-            BashCommandsInOrder(
-                patterns=[
-                    r"superplane\s+integrations\s+list",
-                    r"superplane\s+integrations\s+list-resources",
-                ]
-            ),
+            BashCommandsInOrder(patterns=[
+                r"superplane\s+integrations\s+list",
+                r"superplane\s+integrations\s+list-resources",
+            ]),
         ),
-        metadata={"skill": "superplane-canvas-builder"},
     ),
-]
+])
 
-# ---------- superplane-monitor ----------
-# A fresh demo has no events/executions. We assert command *order*, not content —
-# the skill teaches a specific debugging sequence (events list → list-executions → etc.).
-monitor_cases = [
+
+# A fresh demo has no events/executions. Cases assert command *order* and content
+# of the diagnostic flow — the skill teaches a specific sequence
+# (events list → list-executions → executions list ...).
+monitor_cases = _tagged("superplane-monitor", [
     Case(
         name="why_did_my_run_fail",
         inputs=(
@@ -155,14 +144,11 @@ monitor_cases = [
             "find the canvas, list recent events, then show the executions for the most recent event."
         ),
         evaluators=(
-            BashCommandsInOrder(
-                patterns=[
-                    r"superplane\s+events\s+list",
-                    r"superplane\s+events\s+list-executions",
-                ]
-            ),
+            BashCommandsInOrder(patterns=[
+                r"superplane\s+events\s+list",
+                r"superplane\s+events\s+list-executions",
+            ]),
         ),
-        metadata={"skill": "superplane-monitor"},
     ),
     Case(
         name="stuck_execution",
@@ -171,21 +157,15 @@ monitor_cases = [
             "Use the CLI to find its execution history and diagnose."
         ),
         evaluators=(
-            BashCommandCalled(
-                r"superplane\s+executions\s+list\s+.*--node-id\s+deploy-prod"
-            ),
+            BashCommandCalled(r"superplane\s+executions\s+list\s+.*--node-id\s+deploy-prod"),
         ),
-        metadata={"skill": "superplane-monitor"},
     ),
     Case(
         name="cancel_flow",
         inputs="Cancel execution exec-123 on canvas cvs-9 using the CLI.",
         evaluators=(
-            BashCommandCalled(
-                r"superplane\s+executions\s+cancel\s+.*--execution-id\s+exec-123"
-            ),
+            BashCommandCalled(r"superplane\s+executions\s+cancel\s+.*--execution-id\s+exec-123"),
         ),
-        metadata={"skill": "superplane-monitor"},
     ),
     Case(
         name="queue_inspect",
@@ -194,20 +174,13 @@ monitor_cases = [
             "Inspect the queue via the CLI and tell me what's there."
         ),
         evaluators=(BashCommandCalled(r"superplane\s+queue\s+list"),),
-        metadata={"skill": "superplane-monitor"},
     ),
     Case(
         name="payload_envelope_explain",
-        inputs=(
-            "I'm getting null when I access `$['GitHub onPush'].ref` in a downstream node. Why?"
-        ),
-        evaluators=(
-            ResponseMentions("data"),
-            ResponseMentions("envelope"),
-        ),
-        metadata={"skill": "superplane-monitor"},
+        inputs="I'm getting null when I access `$['GitHub onPush'].ref` in a downstream node. Why?",
+        evaluators=(ResponseMentions("data"), ResponseMentions("envelope")),
     ),
-]
+])
 
 dataset = Dataset(
     name="skills",

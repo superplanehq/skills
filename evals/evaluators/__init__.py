@@ -1,7 +1,3 @@
-"""Deterministic evaluators for skills evals.
-
-Ported (and retargeted) from superplane/agent/evals/evaluators/*.py.
-"""
 from evals.evaluators.bash_command_called import BashCommandCalled, BashCommandNotCalled
 from evals.evaluators.bash_commands_in_order import BashCommandsInOrder
 from evals.evaluators.canvas_has_node import CanvasHasNode

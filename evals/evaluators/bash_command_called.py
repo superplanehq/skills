@@ -11,7 +11,7 @@ from evals.tool_registry import CaseResult
 
 @dataclass
 class BashCommandCalled(Evaluator):
-    """Assert the agent invoked `Bash` with a command matching ``pattern`` at least ``min_calls`` times."""
+    """Assert at least ``min_calls`` Bash commands matched ``pattern``."""
 
     pattern: str
     min_calls: int = 1
@@ -45,6 +45,5 @@ class BashCommandNotCalled(Evaluator):
         if not matches:
             return EvaluationReason(value=True, reason=f"pattern {self.pattern!r} never matched")
         return EvaluationReason(
-            value=False,
-            reason=f"pattern {self.pattern!r} unexpectedly matched: {matches!r}",
+            value=False, reason=f"pattern {self.pattern!r} unexpectedly matched: {matches!r}"
         )

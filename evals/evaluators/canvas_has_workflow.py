@@ -1,7 +1,7 @@
-"""Port of superplane's CanvasHasWorkflow evaluator, retargeted to parsed canvas YAML.
+"""Assert the canvas contains a directed path matching a sequence of node names.
 
-Preserves the "..." wildcard: ``CanvasHasWorkflow("trigger", "...", "deleteSandbox")``
-matches a directed path with zero-or-more intermediate nodes between the named steps.
+Use ``"..."`` between two names to allow any number of intermediate hops.
+Example: ``CanvasHasWorkflow("github.onPullRequest", "...", "wait", "...", "deleteSandbox")``.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
-from evals.harness import parsed_canvas_yaml
+from evals.evaluators.canvas_shape import CanvasShape, shape_for
 from evals.tool_registry import CaseResult
 
 
@@ -19,115 +19,53 @@ class CanvasHasWorkflow(Evaluator):
         self.steps = steps
 
     def evaluate(self, ctx: EvaluatorContext[str, CaseResult, Any]) -> EvaluationReason:
-        parsed = parsed_canvas_yaml(ctx.output)
-        if parsed is None:
+        shape = shape_for(ctx.output)
+        if shape is None:
             return EvaluationReason(value=False, reason="no parseable canvas YAML")
-
-        node_names, graph = _build_graph(parsed)
-        if not node_names:
+        if not shape.node_names_by_id:
             return EvaluationReason(value=False, reason="canvas has no nodes")
 
-        normalized_steps = _normalize_steps(self.steps)
-        if not normalized_steps:
+        steps = _normalize(self.steps)
+        if not steps:
             return EvaluationReason(value=False, reason="empty workflow sequence")
 
-        first = normalized_steps[0]
-        starts = [nid for nid, name in node_names.items() if name == first]
+        starts = [nid for nid, name in shape.node_names_by_id.items() if name == steps[0]]
         if not starts:
-            return EvaluationReason(
-                value=False, reason=f"workflow start {first!r} not found"
-            )
+            return EvaluationReason(value=False, reason=f"workflow start {steps[0]!r} not found")
 
         cache: dict[tuple[str, int], bool] = {}
         for node_id in starts:
-            if _matches_from(node_id, 0, normalized_steps, node_names, graph, cache):
-                return EvaluationReason(
-                    value=True, reason=f"workflow path matches {normalized_steps}"
-                )
-        return EvaluationReason(
-            value=False, reason=f"no connected path matches {normalized_steps}"
-        )
+            if _matches(node_id, 0, steps, shape, cache):
+                return EvaluationReason(value=True, reason=f"workflow path matches {steps}")
+        return EvaluationReason(value=False, reason=f"no connected path matches {steps}")
 
 
-def _build_graph(parsed: dict[str, Any]) -> tuple[dict[str, str], dict[str, set[str]]]:
-    spec = parsed.get("spec") or {}
-    node_names: dict[str, str] = {}
-    graph: dict[str, set[str]] = {}
-
-    # Nodes: spec.nodes[*] with id + component.name (or block).
-    for node in spec.get("nodes") or []:
-        if not isinstance(node, dict):
-            continue
-        node_id = node.get("id")
-        if not isinstance(node_id, str) or not node_id:
-            continue
-        component = node.get("component") or {}
-        name = component.get("name") if isinstance(component, dict) else None
-        if not isinstance(name, str) or not name:
-            block = node.get("block")
-            name = block if isinstance(block, str) and block else None
-        if not name:
-            # Fall back to checking trigger.name for trigger-kind nodes.
-            trigger = node.get("trigger") or {}
-            if isinstance(trigger, dict):
-                name = trigger.get("name")
-        if isinstance(name, str) and name:
-            node_names[node_id] = name
-            graph.setdefault(node_id, set())
-
-    # Triggers in the top-level spec.triggers[*]: treat as nodes with id = trigger.id.
-    for trig in spec.get("triggers") or []:
-        if not isinstance(trig, dict):
-            continue
-        tid = trig.get("id") or (trig.get("trigger") or {}).get("id")
-        tname = trig.get("name") or (trig.get("trigger") or {}).get("name")
-        if isinstance(tid, str) and tid and isinstance(tname, str) and tname:
-            node_names[tid] = tname
-            graph.setdefault(tid, set())
-
-    # Edges: spec.edges[*].
-    for edge in spec.get("edges") or []:
-        if not isinstance(edge, dict):
-            continue
-        src = edge.get("sourceId") or edge.get("source")
-        dst = edge.get("targetId") or edge.get("target")
-        if (
-            isinstance(src, str)
-            and isinstance(dst, str)
-            and src in node_names
-            and dst in node_names
-        ):
-            graph.setdefault(src, set()).add(dst)
-
-    return node_names, graph
-
-
-def _normalize_steps(steps: tuple[str, ...]) -> list[str]:
+def _normalize(steps: tuple[str, ...]) -> list[str]:
+    """Strip whitespace, collapse repeated wildcards, drop leading/trailing wildcards."""
     cleaned = [s.strip() for s in steps if s.strip()]
-    normalized: list[str] = []
+    out: list[str] = []
     for s in cleaned:
-        if s == "..." and normalized and normalized[-1] == "...":
+        if s == "..." and out and out[-1] == "...":
             continue
-        normalized.append(s)
-    while normalized and normalized[0] == "...":
-        normalized.pop(0)
-    while normalized and normalized[-1] == "...":
-        normalized.pop()
-    return normalized
+        out.append(s)
+    while out and out[0] == "...":
+        out.pop(0)
+    while out and out[-1] == "...":
+        out.pop()
+    return out
 
 
-def _matches_from(
+def _matches(
     node: str,
     idx: int,
     steps: list[str],
-    node_names: dict[str, str],
-    graph: dict[str, set[str]],
+    shape: CanvasShape,
     cache: dict[tuple[str, int], bool],
 ) -> bool:
     key = (node, idx)
     if key in cache:
         return cache[key]
-    if node_names[node] != steps[idx]:
+    if shape.node_names_by_id[node] != steps[idx]:
         cache[key] = False
         return False
     if idx == len(steps) - 1:
@@ -136,39 +74,33 @@ def _matches_from(
     nxt = steps[idx + 1]
     if nxt == "...":
         target = steps[idx + 2]
-        for reachable in _reachable(node, target, node_names, graph):
-            if _matches_from(reachable, idx + 2, steps, node_names, graph, cache):
+        for reachable in _reachable(node, target, shape):
+            if _matches(reachable, idx + 2, steps, shape, cache):
                 cache[key] = True
                 return True
         cache[key] = False
         return False
-    for neighbor in graph.get(node, set()):
-        if node_names[neighbor] != nxt:
+    for neighbor in shape.graph.get(node, ()):
+        if shape.node_names_by_id[neighbor] != nxt:
             continue
-        if _matches_from(neighbor, idx + 1, steps, node_names, graph, cache):
+        if _matches(neighbor, idx + 1, steps, shape, cache):
             cache[key] = True
             return True
     cache[key] = False
     return False
 
 
-def _reachable(
-    start: str,
-    target_name: str,
-    node_names: dict[str, str],
-    graph: dict[str, set[str]],
-) -> list[str]:
-    q: deque[str] = deque(graph.get(start, set()))
+def _reachable(start: str, target_name: str, shape: CanvasShape) -> list[str]:
+    """All ids reachable from ``start`` whose component name is ``target_name``."""
+    queue: deque[str] = deque(shape.graph.get(start, ()))
     seen: set[str] = set()
     out: list[str] = []
-    while q:
-        n = q.popleft()
-        if n in seen:
+    while queue:
+        node = queue.popleft()
+        if node in seen:
             continue
-        seen.add(n)
-        if node_names[n] == target_name:
-            out.append(n)
-        for m in graph.get(n, set()):
-            if m not in seen:
-                q.append(m)
+        seen.add(node)
+        if shape.node_names_by_id[node] == target_name:
+            out.append(node)
+        queue.extend(shape.graph.get(node, ()))
     return out
