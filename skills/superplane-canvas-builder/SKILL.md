@@ -341,3 +341,9 @@ For agents that can fetch URLs, the full SuperPlane docs are available in LLM-fr
 - [Actions & Triggers](references/components-and-triggers.md) — Built-in actions and trigger types
 - [GitHub](references/github.md) — Triggers, actions, payload examples, gotchas
 - [Daytona](references/daytona.md) — Actions, payload examples, gotchas
+
+## Patterns
+
+Proven reference architectures for common use cases. Read the relevant pattern before building a canvas that matches its description.
+
+- [Ephemeral Environments](references/patterns/ephemeral-environments.md) — On-demand preview/staging environments with lifecycle management, state tracking, and automatic cleanup
