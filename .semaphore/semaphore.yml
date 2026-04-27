@@ -1,0 +1,22 @@
+version: v1.0
+name: "\U0001F3AF Simple CI Pipeline"
+agent:
+  machine:
+    type: r1-standard-2
+    os_image: ubuntu2404
+fail_fast:
+  stop:
+    when: branch != 'main'
+auto_cancel:
+  running:
+    when: branch != 'main'
+  queued:
+    when: branch = 'main'
+blocks:
+  - name: "\U0001F9EA Test"
+    dependencies: []
+    task:
+      jobs:
+        - name: "\U0001F7E2 Test"
+          commands:
+            - echo "hello world"
