@@ -183,6 +183,13 @@ url: "https://api.example.com/repos/{{ $['GitHub Push'].data.repository.full_nam
 | `previous().data.field` | Access the immediate upstream node's output |
 | `previous(n).data.field` | Walk n levels upstream |
 
+> **Gotcha — nested `.data` keys.** Some webhooks (notably Sentry) have a `data` field inside their payload body. This means the correct path has **two** `.data` segments — `root().data.data.issue.title`. Do **not** add a third — `root().data` already unwraps the envelope shown in `superplane index triggers --name <trigger>` output. Count the `data` keys directly from the example JSON: one `.data` per nested `data` key, no more.
+>
+> Examples:
+> - GitHub push → `root().data.repository.full_name` (one `.data` — webhook body has no extra `data` wrapper)
+> - Sentry issue → `root().data.data.issue.title` (two `.data` — webhook body itself has a `data` field)
+> - `root().data.data.data.…` is almost always wrong — that pattern double-counts the envelope.
+
 ## Complete Example
 
 GitHub push triggers Semaphore CI, then requires approval before deploy:
