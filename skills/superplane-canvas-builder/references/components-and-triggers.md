@@ -1,8 +1,8 @@
-# Components & Triggers Reference
+# Actions & Triggers Reference
 
-This file documents **built-in** (non-integration) components and triggers. For integration-backed components (GitHub, Daytona, etc.), see the per-provider reference files.
+This file documents **built-in** (non-integration) actions and triggers. For integration-backed actions (GitHub, Daytona, etc.), see the per-provider reference files.
 
-> **Note:** Use `superplane index components --name <name> --output json` and `superplane index triggers --name <name> --output json` to get the richest machine-readable metadata available from the CLI. Use this reference and provider reference files to capture practical field-format gotchas and real-world examples.
+> **Note:** Use `superplane index actions --name <name> --output json` and `superplane index triggers --name <name> --output json` to get the richest machine-readable metadata available from the CLI. Use this reference and provider reference files to capture practical field-format gotchas and real-world examples.
 
 ## Built-in Triggers
 
@@ -14,7 +14,7 @@ This file documents **built-in** (non-integration) components and triggers. For 
 
 Integration triggers (GitHub, AWS, etc.) are discovered via `superplane index triggers --from <integration>`.
 
-## Built-in Components
+## Built-in Actions
 
 ### HTTP Request (`http`)
 

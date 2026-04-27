@@ -30,8 +30,7 @@ spec:
 - id: trigger-main
   name: github.onPush
   type: TYPE_TRIGGER
-  trigger:
-    name: github.onPush
+  component: github.onPush
   integration:
     id: <github-integration-id>
     name: ""
@@ -47,14 +46,13 @@ spec:
   isCollapsed: false
 ```
 
-### Component Node
+### Action Node
 
 ```yaml
 - id: component-ci
   name: semaphore.runWorkflow
-  type: TYPE_COMPONENT
-  component:
-    name: semaphore.runWorkflow
+  type: TYPE_ACTION
+  component: semaphore.runWorkflow
   integration:
     id: <semaphore-integration-id>
     name: ""
@@ -69,14 +67,13 @@ spec:
   isCollapsed: false
 ```
 
-### Built-in Component (no integration)
+### Built-in Action (no integration)
 
 ```yaml
 - id: approval-gate
   name: approval
-  type: TYPE_COMPONENT
-  component:
-    name: approval
+  type: TYPE_ACTION
+  component: approval
   configuration: {}
   position:
     x: 1320
@@ -91,9 +88,8 @@ spec:
 | --- | --- | --- |
 | `id` | Yes | Unique ID within the canvas |
 | `name` | Yes | Display name — keep unique to avoid warnings |
-| `type` | Yes | `TYPE_TRIGGER` or `TYPE_COMPONENT` |
-| `trigger.name` | Triggers | Trigger type (e.g. `github.onPush`) |
-| `component.name` | Components | Component type (e.g. `semaphore.runWorkflow`) |
+| `type` | Yes | `TYPE_TRIGGER` or `TYPE_ACTION` |
+| `component` | Triggers and actions | Node type reference (e.g. `github.onPush`, `semaphore.runWorkflow`) |
 | `integration.id` | Integration nodes | Connected integration instance ID |
 | `integration.name` | No | Can be empty string |
 | `paused` | No | Disable without removing (default: `false`) |
@@ -156,7 +152,7 @@ edges:
 
 ### Output Channels
 
-| Component | Channels | Behavior |
+| Action | Channels | Behavior |
 | --- | --- | --- |
 | Filter | `default` | Emits only when true; false events stop silently |
 | If | `true`, `false` | Routes to one of two channels |
@@ -167,7 +163,7 @@ edges:
 Typical gated flow:
 
 ```
-Trigger → Filter (default) → Approval (approved) → Deploy component
+Trigger → Filter (default) → Approval (approved) → Deploy action
 ```
 
 ## Expressions
@@ -202,8 +198,7 @@ spec:
     - id: trigger-main
       name: github.onPush
       type: TYPE_TRIGGER
-      trigger:
-        name: github.onPush
+      component: github.onPush
       integration:
         id: <github-integration-id>
         name: ""
@@ -218,9 +213,8 @@ spec:
 
     - id: component-ci
       name: semaphore.runWorkflow
-      type: TYPE_COMPONENT
-      component:
-        name: semaphore.runWorkflow
+      type: TYPE_ACTION
+      component: semaphore.runWorkflow
       integration:
         id: <semaphore-integration-id>
         name: ""
@@ -234,9 +228,8 @@ spec:
 
     - id: approval-gate
       name: approval
-      type: TYPE_COMPONENT
-      component:
-        name: approval
+      type: TYPE_ACTION
+      component: approval
       configuration: {}
       position: { x: 1320, y: 100 }
       paused: false

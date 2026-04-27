@@ -1,6 +1,6 @@
 ---
 name: superplane-cli
-description: Use when working with the SuperPlane CLI to discover integrations, components, and triggers, build or troubleshoot canvases, manage secrets, and monitor executions. Covers authentication, list/get commands, interpreting configuration schemas, wiring channels between nodes, resolving integration binding issues, and inspecting runs. Triggers on "superplane", "canvas", "workflow", "CLI", "connect", "integration is required", "execution".
+description: Use when working with the SuperPlane CLI to discover integrations, actions, and triggers, build or troubleshoot canvases, manage secrets, and monitor executions. Covers authentication, list/get commands, interpreting configuration schemas, wiring channels between nodes, resolving integration binding issues, and inspecting runs. Triggers on "superplane", "canvas", "workflow", "CLI", "connect", "integration is required", "execution".
 ---
 
 # SuperPlane CLI
@@ -31,9 +31,9 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | List connected integrations | `superplane integrations list` |
 | Inspect connected integration | `superplane integrations get <id>` |
 | List integration resources | `superplane integrations list-resources --id <id> --type <type>` |
-| List components | `superplane index components` |
-| Components from provider | `superplane index components --from github` |
-| Describe a component | `superplane index components --name semaphore.runWorkflow` |
+| List actions | `superplane index actions` |
+| Actions from provider | `superplane index actions --from github` |
+| Describe an action | `superplane index actions --name semaphore.runWorkflow` |
 | List triggers | `superplane index triggers` |
 | Triggers from provider | `superplane index triggers --from github` |
 | Describe a trigger | `superplane index triggers --name github.onPush` |
@@ -56,7 +56,7 @@ If this does not print a path, the CLI is **not installed**. Stop and tell the u
 
 > The SuperPlane CLI is not installed. Install it from https://docs.superplane.com/installation/cli and then re-run this task.
 
-Do **not** attempt to install the CLI on behalf of the user. Do **not** continue with doc-based guesswork — the CLI provides exact trigger names, component names, integration IDs, and config schemas that documentation cannot reliably substitute.
+Do **not** attempt to install the CLI on behalf of the user. Do **not** continue with doc-based guesswork — the CLI provides exact trigger names, action names, integration IDs, and config schemas that documentation cannot reliably substitute.
 
 Only after confirming the binary exists should you verify the session:
 
@@ -95,21 +95,21 @@ Run these first to understand what's available:
 superplane index integrations          # available providers
 superplane integrations list           # connected instances in this org
 superplane index triggers              # all trigger types
-superplane index components            # all component types
+superplane index actions            # all action types
 ```
 
 Narrow to one provider:
 
 ```bash
 superplane index triggers --from github
-superplane index components --from github
+superplane index actions --from github
 ```
 
 Inspect required config fields and payload shapes:
 
 ```bash
 superplane index triggers --name github.onPush
-superplane index components --name semaphore.runWorkflow
+superplane index actions --name semaphore.runWorkflow
 ```
 
 List runtime options for `integration-resource` fields (e.g., repos, projects):

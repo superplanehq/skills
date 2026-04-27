@@ -1,19 +1,19 @@
 # Daytona Integration Reference
 
-Components, payload examples, recipes, and gotchas for the Daytona integration in SuperPlane.
+Actions, payload examples, recipes, and gotchas for the Daytona integration in SuperPlane.
 
 Daytona is **action-only** — it has no triggers. It provides isolated sandbox environments for running code and commands.
 
 All payloads are wrapped in the SuperPlane envelope: `{ data: {...}, timestamp, type }`. Expression paths below include the `.data.` prefix.
 
 > **Source of truth:** treat CLI schema and resources as authoritative for your org/runtime:
-> - `superplane index components --name <component> --output json`
+> - `superplane index actions --name <action> --output json`
 > - `superplane integrations list-resources --id <integration-id> --type <resource-type>`
 > If this reference differs from CLI output, follow CLI output.
 
-## Components
+## Actions
 
-| Component | Description | Output Type | Channels |
+| Action | Description | Output Type | Channels |
 | --- | --- | --- | --- |
 | `daytona.createSandbox` | Create an isolated sandbox | `daytona.sandbox` | `default` |
 | `daytona.deleteSandbox` | Remove a sandbox | `daytona.delete.response` | `default` |
@@ -21,9 +21,9 @@ All payloads are wrapped in the SuperPlane envelope: `{ data: {...}, timestamp, 
 | `daytona.executeCommand` | Run a shell command in a sandbox | `daytona.command.response` | `success`, `failed` |
 | `daytona.getPreviewUrl` | Get a preview URL for a sandbox port | `daytona.preview.response` | `default` |
 
-### Component Configuration (YAML keys)
+### Action Configuration (YAML keys)
 
-| Component | Required Fields | Optional Fields |
+| Action | Required Fields | Optional Fields |
 | --- | --- | --- |
 | `daytona.createSandbox` | — | `envVars`, `autoStopInterval`, `target`, `snapshot` |
 | `daytona.deleteSandbox` | `sandbox` | `force` |
@@ -40,9 +40,8 @@ All payloads are wrapped in the SuperPlane envelope: `{ data: {...}, timestamp, 
 ```yaml
 - id: run-tests
   name: Run Tests
-  type: TYPE_COMPONENT
-  component:
-    name: daytona.executeCommand
+  type: TYPE_ACTION
+  component: daytona.executeCommand
   integration:
     id: <daytona-integration-id>
     name: ""
@@ -170,7 +169,7 @@ command: >-
 Trigger → Create Sandbox → Execute Command(s) → Get Preview URL → ... → Delete Sandbox
 ```
 
-The sandbox `id` from `createSandbox` is required by all subsequent Daytona components. Pass it via expression:
+The sandbox `id` from `createSandbox` is required by all subsequent Daytona actions. Pass it via expression:
 
 ```
 {{ $['Create Sandbox'].data.id }}
@@ -412,7 +411,7 @@ $['Delete Sandbox'].data.deleted         # true
 
 ### Sandbox ID must be passed to every subsequent step
 
-Every Daytona component after `createSandbox` needs the sandbox ID. Use `{{ $['Create Sandbox'].data.id }}` — not `$['Create Sandbox'].id` (missing `.data.`).
+Every Daytona action after `createSandbox` needs the sandbox ID. Use `{{ $['Create Sandbox'].data.id }}` — not `$['Create Sandbox'].id` (missing `.data.`).
 
 ### Auto-stop interval
 
