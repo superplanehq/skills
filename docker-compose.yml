@@ -1,0 +1,51 @@
+# Always-fresh eval stack. Brings up a dedicated superplane-demo container and an
+# eval runner on an internal network. Nothing is exposed to the host.
+#
+# Usage:
+#   ANTHROPIC_API_KEY=... make evals
+#   ANTHROPIC_API_KEY=... EVAL_CASES=whoami_basic make evals
+#
+# The eval runner container exits with the runner's exit code; `make evals` tears
+# the stack down and nukes volumes (`down -v`) so every run starts clean.
+
+services:
+  superplane:
+    image: ghcr.io/superplanehq/superplane-demo:stable
+    # No ports published to host — only reachable from the eval container via DNS name `superplane`.
+    healthcheck:
+      # The demo image serves the SPA and API on :3000. Treat "any 2xx/3xx on /" as healthy
+      # since /api/v1/health may not exist on older images.
+      test: ["CMD-SHELL", "curl -fsS --max-time 2 http://localhost:3000/ > /dev/null || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
+    tmpfs:
+      # Keep all demo state in-memory so teardown is instant and guaranteed-clean.
+      - /app/data
+
+  evals:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    depends_on:
+      superplane:
+        condition: service_healthy
+    environment:
+      SUPERPLANE_URL: "http://superplane:3000"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY must be set}
+      EVAL_MODEL: ${EVAL_MODEL:-claude-haiku-4-5}
+      EVAL_CASES: ${EVAL_CASES:-}
+      EVAL_SKILL: ${EVAL_SKILL:-}
+      EVAL_REPORT_FORMAT: ${EVAL_REPORT_FORMAT:-both}
+    volumes:
+      # Read-only source mounts.
+      - ./skills:/app/skills:ro
+      - ./scripts:/app/scripts:ro
+      - ./evals:/app/evals:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./Makefile:/app/Makefile:ro
+      # Writable: reports & logs flow back to the host for inspection.
+      - ./evals/reports:/app/evals/reports
+      - ./tmp:/app/tmp
+    working_dir: /app

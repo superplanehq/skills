@@ -13,3 +13,11 @@ Thumbs.db
 
 # Node
 node_modules/
+
+# Python evals
+.venv/
+__pycache__/
+*.pyc
+evals/reports/
+tmp/
+
