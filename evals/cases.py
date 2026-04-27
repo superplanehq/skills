@@ -13,6 +13,8 @@ from evals.evaluators import (
     BashCommandsInOrder,
     CanvasHasNode,
     CanvasHasTrigger,
+    FileContentMatches,
+    FileContentNotMatches,
     FileNotWritten,
     FileWritten,
     RefusedBecauseMissingCli,
@@ -133,6 +135,44 @@ canvas_cases = _tagged("superplane-canvas-builder", [
                 r"superplane\s+integrations\s+list",
                 r"superplane\s+index\s+(?:triggers|actions)\s+--from\s+\w+",
             ]),
+        ),
+    ),
+    # Tests the new envelope clarification: agent must teach that `root().data` already
+    # unwraps the envelope, so for Sentry's nested-`data` payload the correct path has
+    # exactly two `.data.` segments — not three.
+    Case(
+        name="sentry_double_data_explain",
+        inputs=(
+            "I'm building a SuperPlane canvas with a sentry.onIssueCreated trigger. In a "
+            "downstream action's configuration I wrote `{{ root().data.data.data.issue.title }}` "
+            "and it resolves to null. Explain what's wrong and tell me the correct expression."
+        ),
+        evaluators=(
+            # Must produce the correct path with exactly two `.data` segments.
+            ResponseMentions("root().data.data.issue"),
+        ),
+    ),
+    # Tests that, when authoring a canvas YAML for a Sentry trigger, the agent looks
+    # up the trigger schema and writes expressions with the correct double-`.data.`
+    # path — never the triple-`.data.` shape that double-counts the envelope.
+    Case(
+        name="sentry_canvas_yaml_expression",
+        inputs=(
+            "Generate a SuperPlane canvas YAML scaffold for me. Use sentry.onIssueCreated as "
+            "the trigger and an http action that POSTs the issue title to "
+            "https://example.com/notify in the body. Reference the issue title via expression "
+            "from the trigger. Write the canvas to canvas.yaml. Do not apply — this is a "
+            "YAML-authoring task only."
+        ),
+        evaluators=(
+            FileWritten(r".*\.ya?ml$"),
+            YamlValidatesCanvas(),
+            # Correct double-`.data.` path appears in the YAML.
+            FileContentMatches(r".*\.ya?ml$", r"\.data\.data\.issue"),
+            # Triple-`.data.` (the envelope-double-counting bug) must NOT appear.
+            FileContentNotMatches(r".*\.ya?ml$", r"\.data\.data\.data\."),
+            # No applying the canvas — this is YAML-only, and Sentry isn't connected anyway.
+            BashCommandNotCalled(r"superplane\s+canvases\s+create\s+.*--file"),
         ),
     ),
 ])

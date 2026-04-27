@@ -167,6 +167,10 @@ Every node output is wrapped in an envelope: `{ data: {...}, timestamp, type }`.
 
 > **Common mistake:** writing `$['Create Sandbox'].id` instead of `$['Create Sandbox'].data.id`. Always include `.data.`.
 
+> **Important — example payloads already represent the envelope.** The example payload printed by `superplane index triggers --name <trigger>` (and shown in this skill's reference files) **is the full envelope**: the outermost `{ data: {...}, timestamp, type }`. `root().data` returns that top-level `data` object — do **not** add an extra `.data` on top of it. To build a correct expression, count the `data` keys directly from the example JSON: one `.data` per nested `data` key you need to traverse, no more.
+>
+> **Nested `data` keys.** Some webhooks (notably Sentry) carry their own `data` field inside the payload body. The correct path therefore has **two** `.data` segments — `root().data.data.issue.title` — not three. `root().data` already unwraps the envelope; the second `.data` walks into the webhook's own `data` field. If you find yourself writing `root().data.data.data.…`, you are double-counting the envelope.
+
 Use double curly braces `{{ }}` for expressions in configuration fields:
 
 ```
@@ -341,3 +345,4 @@ For agents that can fetch URLs, the full SuperPlane docs are available in LLM-fr
 - [Actions & Triggers](references/components-and-triggers.md) — Built-in actions and trigger types
 - [GitHub](references/github.md) — Triggers, actions, payload examples, gotchas
 - [Daytona](references/daytona.md) — Actions, payload examples, gotchas
+- [Sentry](references/sentry.md) — Triggers, payload examples, nested `data.data` gotcha
