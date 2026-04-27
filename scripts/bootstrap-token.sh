@@ -91,6 +91,16 @@ log "superplane connect $SUPERPLANE_URL"
 superplane connect "$SUPERPLANE_URL" "$SA_TOKEN"
 superplane whoami
 
+# --- 5. seed a canvas named "my-canvas" ----------------------------------------
+# Several monitor/canvas-update eval cases reference an existing canvas. Without
+# this, the agent correctly stops at "canvas not found" before reaching the
+# diagnostic commands the skill teaches.
+log "creating eval canvas 'my-canvas'"
+if ! superplane canvases get my-canvas >/dev/null 2>&1; then
+  superplane canvases create my-canvas >/dev/null 2>&1 || \
+    log "warning: failed to create my-canvas (continuing)"
+fi
+
 export SUPERPLANE_URL
 export SUPERPLANE_API_TOKEN="$SA_TOKEN"
 export SUPERPLANE_ORGANIZATION_ID="$ORG_ID"

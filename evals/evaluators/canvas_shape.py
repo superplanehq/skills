@@ -52,7 +52,9 @@ def process_canvas(parsed: dict[str, Any]) -> CanvasShape:
         shape.components.append(name)
         shape.node_names_by_id[node_id] = name
         shape.graph.setdefault(node_id, set())
-        if isinstance(node.get("trigger"), dict):
+        # A node is a trigger if it has any non-empty `trigger` key (object or scalar).
+        trig = node.get("trigger")
+        if (isinstance(trig, dict) and trig) or (isinstance(trig, str) and trig):
             shape.triggers.append(name)
 
     for edge in spec.get("edges") or []:
@@ -66,18 +68,25 @@ def process_canvas(parsed: dict[str, Any]) -> CanvasShape:
     return shape
 
 
+_NAME_KEYS = ("trigger", "action", "component")
+
+
 def _node_name(node: dict[str, Any]) -> str | None:
-    """Return the component/trigger name for a node, or None if it can't be resolved."""
-    trigger = node.get("trigger")
-    if isinstance(trigger, dict):
-        name = trigger.get("name")
-        if isinstance(name, str) and name:
-            return name
-    component = node.get("component")
-    if isinstance(component, dict):
-        name = component.get("name")
-        if isinstance(name, str) and name:
-            return name
+    """Return the component/trigger name for a node, or None if it can't be resolved.
+
+    Accepts every shape the agent and CLI emit:
+      - ``trigger: {name: foo}`` / ``trigger: foo``  — trigger nodes
+      - ``action:  {name: foo}`` / ``action: foo``   — action nodes (v0.18.0+ terminology)
+      - ``component: {name: foo}`` / ``component: foo`` — legacy/templates
+    """
+    for key in _NAME_KEYS:
+        value = node.get(key)
+        if isinstance(value, dict):
+            name = value.get("name")
+            if isinstance(name, str) and name:
+                return name
+        elif isinstance(value, str) and value:
+            return value
     return None
 
 

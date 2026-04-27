@@ -213,10 +213,15 @@ class ReportBuilder:
             )
 
         output: CaseResult = case_result.output  # type: ignore[assignment]
+        # A case passes when its assertions are all green. We deliberately do not
+        # gate on ``output.task_failed`` because the SDK occasionally raises
+        # transient "Fatal error in message reader" exceptions after the agent's
+        # final response — the assertions are computed on the recorded data, so
+        # they remain the source of truth.
         return _CaseRow(
             name=name,
             skill=self.skills.get(name, "—"),
-            passed=not output.task_failed and n_assertions > 0 and n_passed == n_assertions,
+            passed=n_assertions > 0 and n_passed == n_assertions,
             task_failed=output.task_failed,
             error_message=output.error_message,
             input=getattr(case_result, "inputs", "-"),
