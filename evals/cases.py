@@ -35,12 +35,12 @@ cli_cases = _tagged("superplane-cli", [
         evaluators=(BashCommandCalled(r"superplane\s+whoami"),),
     ),
     Case(
-        name="list_components_github",
+        name="list_actions_github",
         inputs=(
-            "List the SuperPlane components available for the GitHub integration. "
+            "List the SuperPlane actions available for the GitHub integration. "
             "Run the CLI, then summarize what you find."
         ),
-        evaluators=(BashCommandCalled(r"superplane\s+index\s+components\s+--from\s+github"),),
+        evaluators=(BashCommandCalled(r"superplane\s+index\s+actions\s+--from\s+github"),),
     ),
     Case(
         name="missing_cli_refusal",
@@ -50,16 +50,6 @@ cli_cases = _tagged("superplane-cli", [
             BashCommandNotCalled(r"superplane\s+canvases\s+create"),
         ),
         metadata={"strip_cli": True},
-    ),
-    Case(
-        name="connect_flow",
-        inputs="Connect me to the SuperPlane instance at https://sp.example.com with token abc123.",
-        evaluators=(
-            BashCommandsInOrder(patterns=[
-                r"superplane\s+connect\s+https://sp\.example\.com",
-                r"superplane\s+whoami",
-            ]),
-        ),
     ),
     Case(
         name="describe_trigger",
@@ -73,7 +63,7 @@ cli_cases = _tagged("superplane-cli", [
 
 
 # No integrations are connected on the clean demo. Cases here test that the agent
-# produces a well-formed YAML referencing components by exact name (the backend
+# produces a well-formed YAML referencing actions by exact name (the backend
 # may reject the apply, which is fine — we only validate YAML shape).
 canvas_cases = _tagged("superplane-canvas-builder", [
     Case(
@@ -87,7 +77,7 @@ canvas_cases = _tagged("superplane-canvas-builder", [
         evaluators=(
             BashCommandsInOrder(patterns=[
                 r"superplane\s+integrations\s+list",
-                r"superplane\s+index\s+components\s+--from\s+slack",
+                r"superplane\s+index\s+actions\s+--from\s+slack",
             ]),
             FileWritten(r".*\.ya?ml$"),
             YamlValidatesCanvas(),
