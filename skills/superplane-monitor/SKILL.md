@@ -1,6 +1,6 @@
 ---
 name: superplane-monitor
-description: Monitor and debug SuperPlane workflow executions. Inspect runs, diagnose failures, and manage execution queues. Use when a workflow fails, an execution is stuck, or the user wants to check run status. Triggers on "debug", "failed", "execution", "run status", "stuck", "queue", "troubleshoot".
+description: Monitor and debug SuperPlane workflow executions. Inspect runs, diagnose failures, and manage execution queues. Use when a workflow fails, an execution is stuck, or the user wants to check run status. Triggers on "debug", "failed", "failure", "execution", "output channel", "passed but failed", "run status", "stuck", "queue", "troubleshoot".
 ---
 
 # SuperPlane Monitor
@@ -84,7 +84,7 @@ Check if failures are recurring. For expression errors, inspect the actual paylo
 Use these real payloads to fix expression paths rather than guessing from documentation.
 
 For branching/channel issues, inspect `outputs` in execution YAML (not just top-level `result`):
-- A node can show `RESULT_PASSED` while only emitting on a non-default channel (for example, `failed`)
+- A node can show `result: RESULT_PASSED` while routing onto a `failure` channel — these are independent (runtime health vs. semantic routing). See [Execution result vs. output channel](https://docs.superplane.com/concepts/data-flow#execution-result-vs-output-channel) before flagging this as a bug.
 - Confirm emitted channel names under `outputs` match edge wiring (`success`, `failed`, `default`, etc.)
 - If downstream behavior looks inconsistent with `events list-executions`, trust the node's `outputs` block for routing truth
 
