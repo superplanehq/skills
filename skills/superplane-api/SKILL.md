@@ -1,15 +1,15 @@
 ---
 name: superplane-api
-description: Use when calling the SuperPlane REST API directly (without the CLI), or when an agent or script needs the machine-readable OpenAPI spec to generate or verify HTTP requests. Covers the spec endpoint, cookie-based token authentication, base URL conventions, pagination, and resource overview. Triggers on "API", "REST", "OpenAPI", "Swagger", "HTTP request", "service account token", "superplane API".
+description: Use when calling the SuperPlane REST API directly, or when an agent or script needs the machine-readable OpenAPI spec to generate or verify HTTP requests. Covers the spec endpoint, bearer-token authentication, base URL conventions, pagination, and resource overview. Triggers on "API", "REST", "OpenAPI", "Swagger", "HTTP request", "service account token", "superplane API".
 ---
 
 # SuperPlane API
 
-Call the SuperPlane API over HTTPS. Use this skill when the CLI is unavailable or when you need programmatic HTTP access — for example, from scripts, CI jobs, or coding agents that generate requests from the OpenAPI spec.
+Call the SuperPlane API over HTTPS. Use this skill when you need programmatic HTTP access — for example, from scripts, CI jobs, or coding agents that generate requests from the OpenAPI spec.
 
 ## OpenAPI Spec Endpoint
 
-The machine-readable API spec is served at a public URL:
+The machine-readable API spec is served at:
 
 ```
 GET https://app.superplane.com/api/v1/docs/superplane.swagger.json
@@ -48,32 +48,30 @@ For on-prem or self-hosted SuperPlane, replace the host:
 GET https://<your-superplane-host>/api/v1/docs/superplane.swagger.json
 ```
 
-The path is the same on every deployment.
-
 ## Authentication
 
-The spec endpoint is public, but **all other API endpoints require authentication**.
+Most operational API endpoints require authentication, but some routes are intentionally public (for example `POST /api/v1/setup-owner` and `GET /api/v1/canvases/is-alive`).
 
 ### Obtaining a token
 
 1. **Service account** — create one in the SuperPlane UI, then use its token for automation.
-2. **Personal token** — regenerate via `POST /api/v1/me/token` (requires an existing session).
+2. **Personal token** — regenerate via `POST /api/v1/me/token` (requires an authenticated user context).
 
 ### Header construction
 
-SuperPlane does **not** use the `Authorization: Bearer` header. Pass the token in the **`Cookie`** header:
+For org-scoped API routes protected by `OrganizationAuthMiddleware`, API tokens (service-account or user token) are sent in the **`Authorization`** header:
 
 ```
-Cookie: token=<API_TOKEN>
+Authorization: Bearer <API_TOKEN>
 ```
 
-Do not send `Authorization: Bearer <token>` — the API will ignore it and return `401`.
+In `OrganizationAuthMiddleware` (`pkg/public/middleware/auth.go`), any non-empty `Authorization` header triggers token auth first; the bearer token is then parsed by `getBearerToken()`.
 
 ### Example: authenticated request
 
 ```bash
 curl -s https://app.superplane.com/api/v1/canvases \
-  -H "Cookie: token=$SUPERPLANE_TOKEN"
+  -H "Authorization: Bearer $SUPERPLANE_TOKEN"
 ```
 
 ```python
@@ -81,7 +79,7 @@ import urllib.request, json
 
 req = urllib.request.Request(
     "https://app.superplane.com/api/v1/canvases",
-    headers={"Cookie": f"token={TOKEN}"},
+    headers={"Authorization": f"Bearer {TOKEN}"},
 )
 canvases = json.loads(urllib.request.urlopen(req).read())
 ```
@@ -90,7 +88,7 @@ canvases = json.loads(urllib.request.urlopen(req).read())
 
 ```bash
 curl -s https://app.superplane.com/api/v1/me \
-  -H "Cookie: token=$SUPERPLANE_TOKEN"
+  -H "Authorization: Bearer $SUPERPLANE_TOKEN"
 ```
 
 A `200` response with user details confirms the token is valid. Any `401` or connection error means the token or host is incorrect.
@@ -104,11 +102,11 @@ A `200` response with user details confirms the token is valid. Any `401` or con
 | Content-Type | `application/json` (request and response) |
 | Schemes | HTTPS (production), HTTP (local dev) |
 | Success status | `200` for all methods including POST and DELETE (gRPC-gateway convention) |
-| Pagination | Cursor-based: `?limit=<int>&before=<RFC 3339 timestamp>` on list endpoints |
+| Pagination | Available on some list endpoints via `?limit=<int>&before=<RFC 3339 timestamp>` |
 
 ### Pagination
 
-List endpoints that support pagination accept two optional query parameters:
+Some list endpoints support cursor pagination with two optional query parameters:
 
 - `limit` (integer) — max items to return
 - `before` (date-time, RFC 3339) — return items created before this timestamp
@@ -145,10 +143,12 @@ The API is organized into these resource groups. Every path is under `/api/v1/`.
 | **Node Executions** | `canvases/{canvasId}/nodes/{nodeId}/executions`, `.../events`, `.../pause`, `.../queue` | List, cancel, invoke hooks, manage queue |
 | **Memory** | `canvases/{canvasId}/memory`, `.../memory/{memoryId}` | Get, delete |
 | **Groups** | `groups`, `groups/{groupName}`, `.../users`, `.../users/remove` | CRUD, manage members |
-| **Integrations** | `integrations`, `organizations/{id}/integrations`, `.../{integrationId}`, `.../resources` | List available, CRUD connected, list resources |
-| **Invitations** | `organizations/{id}/invitations`, `.../{invitationId}`, `invite-links/{token}/accept` | List, create, revoke, accept |
+| **Integrations** | `integrations` | List integration types |
+| **Organization Integrations** | `organizations/{id}/integrations`, `.../{integrationId}`, `.../resources`, `.../properties`, `.../secrets`, `.../capabilities`, `.../next`, `.../previous` | CRUD connected integrations, list resources, update config/capabilities, navigate versions |
+| **Invitations** | `organizations/{id}/invitations`, `.../{invitationId}`, `invite-links/{token}/accept` | List, create, revoke email invitations, accept invite-link token |
+| **Invite Link Management** | `organizations/{id}/invite-link`, `.../invite-link/reset` | Get/update invite-link settings, rotate token |
 | **Me** | `me`, `me/token` | Get current user, regenerate token |
-| **Organizations** | `organizations/{id}`, `.../agent-settings`, `.../usage`, `.../users/{userId}` | Describe, update, manage agent settings, usage |
+| **Organizations** | `organizations/{id}`, `.../agent-settings`, `.../agent-settings/openai-key`, `.../usage`, `.../users/{userId}`, `.../invite-link`, `.../invite-link/reset` | Describe/update org, manage agent settings and OpenAI key, inspect usage, manage membership and invite-link settings |
 | **Roles** | `roles`, `roles/{roleName}`, `.../users` | CRUD, list members |
 | **Secrets** | `secrets`, `secrets/{idOrName}`, `.../keys/{keyName}`, `.../name` | CRUD, manage keys, rename |
 | **Service Accounts** | `service-accounts`, `service-accounts/{id}`, `.../token` | CRUD, regenerate token |
@@ -159,23 +159,8 @@ The API is organized into these resource groups. Every path is under `/api/v1/`.
 ## Typical Agent Workflow
 
 1. **Fetch the spec** — one GET to the public endpoint, cache for the session.
-2. **Authenticate** — set `Cookie: token=<TOKEN>` on all subsequent requests.
+2. **Authenticate** — set `Authorization: Bearer <TOKEN>` on API requests.
 3. **Verify** — `GET /api/v1/me` to confirm the token works.
 4. **Discover** — list canvases, integrations, triggers, or components to understand what exists.
 5. **Operate** — create/update/delete resources as needed.
 
-## When to Use Other Skills
-
-| Need | Use Skill |
-| --- | --- |
-| Operate via CLI instead of HTTP | superplane-cli |
-| Design a canvas from requirements | superplane-canvas-builder |
-| Debug a failed execution | superplane-monitor |
-| Write expressions in canvas configs | superplane-expressions |
-
-## Documentation
-
-For agents that can fetch URLs, the full SuperPlane docs are available in LLM-friendly format:
-
-- Compact index: https://docs.superplane.com/llms.txt
-- Full content: https://docs.superplane.com/llms-full.txt
