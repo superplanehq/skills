@@ -18,6 +18,7 @@ npx skills add superplanehq/skills --skill superplane-cli
 
 | Skill | Description |
 | --- | --- |
+| **superplane-api** | Call the SuperPlane REST API directly — OpenAPI spec, auth, HTTP requests |
 | **superplane-cli** | Operate SuperPlane via CLI — auth, canvases, secrets, runs |
 | **superplane-canvas-builder** | Design workflow canvases from requirements |
 | **superplane-monitor** | Debug and inspect workflow executions |
