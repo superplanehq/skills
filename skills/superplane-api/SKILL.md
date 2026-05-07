@@ -1,11 +1,11 @@
 ---
 name: superplane-api
-description: Use when calling the SuperPlane REST API directly, or when an agent or script needs the machine-readable OpenAPI spec to generate or verify HTTP requests. Covers the spec endpoint, bearer-token authentication, base URL conventions, pagination, and resource overview. Triggers on "API", "REST", "OpenAPI", "Swagger", "HTTP request", "service account token", "superplane API".
+description: Use when calling the SuperPlane API directly, or when an agent or script needs the machine-readable OpenAPI spec to generate or verify HTTP requests. Covers the spec endpoint, bearer-token authentication, base URL conventions, pagination, and resource overview. Triggers on "API", "REST", "OpenAPI", "Swagger", "HTTP request", "service account token", "superplane API".
 ---
 
 # SuperPlane API
 
-Call the SuperPlane API over HTTPS. Use this skill when you need programmatic HTTP access — for example, from scripts, CI jobs, or coding agents that generate requests from the OpenAPI spec.
+Use this skill when you need direct SuperPlane API access — for example, from scripts, CI jobs, or coding agents that fetch the OpenAPI spec and construct API requests.
 
 ## OpenAPI Spec Endpoint
 
