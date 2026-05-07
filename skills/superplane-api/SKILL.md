@@ -1,11 +1,11 @@
 ---
 name: superplane-api
-description: Use when calling the SuperPlane API directly, or when an agent or script needs the machine-readable OpenAPI spec to generate or verify HTTP requests. Covers the spec endpoint, bearer-token authentication, base URL conventions, pagination, and resource overview. Triggers on "API", "REST", "OpenAPI", "Swagger", "HTTP request", "service account token", "superplane API".
+description: Use when calling the SuperPlane API directly, or when an agent or script needs the machine-readable OpenAPI spec to build or validate HTTP requests. Covers the spec endpoint, bearer-token authentication, base URL conventions, pagination, and a resource overview. Triggers on "API", "REST", "OpenAPI", "Swagger", "HTTP request", "service account token", "superplane API".
 ---
 
 # SuperPlane API
 
-Use this skill when you need direct SuperPlane API access — for example, from scripts, CI jobs, or coding agents that fetch the OpenAPI spec and construct API requests.
+Use this skill when you need to call the SuperPlane API directly — for example, from scripts, CI jobs, or coding agents that fetch the OpenAPI spec and construct requests.
 
 ## OpenAPI Spec Endpoint
 
@@ -42,7 +42,7 @@ Agents should fetch the spec **once per session** and cache it in memory.
 
 ### Self-hosted instances
 
-For on-prem or self-hosted SuperPlane, replace the host:
+For self-hosted SuperPlane deployments, replace the host:
 
 ```
 GET https://<your-superplane-host>/api/v1/docs/superplane.swagger.json
@@ -50,7 +50,7 @@ GET https://<your-superplane-host>/api/v1/docs/superplane.swagger.json
 
 ## Authentication
 
-Most operational API endpoints require authentication, but some routes are intentionally public (for example `POST /api/v1/setup-owner` and `GET /api/v1/canvases/is-alive`).
+Most API endpoints require authentication, but some routes are intentionally public (for example `POST /api/v1/setup-owner` and `GET /api/v1/canvases/is-alive`).
 
 ### Obtaining a token
 
@@ -59,13 +59,13 @@ Most operational API endpoints require authentication, but some routes are inten
 
 ### Header construction
 
-For org-scoped API routes protected by `OrganizationAuthMiddleware`, API tokens (service-account or user token) are sent in the **`Authorization`** header:
+For org-scoped routes protected by `OrganizationAuthMiddleware`, send API tokens (service account or user token) in the **`Authorization`** header:
 
 ```
 Authorization: Bearer <API_TOKEN>
 ```
 
-In `OrganizationAuthMiddleware` (`pkg/public/middleware/auth.go`), any non-empty `Authorization` header triggers token auth first; the bearer token is then parsed by `getBearerToken()`.
+In `OrganizationAuthMiddleware` (`pkg/public/middleware/auth.go`), any non-empty `Authorization` header triggers token auth first. The bearer token is then parsed by `getBearerToken()`.
 
 ### Example: authenticated request
 
@@ -91,7 +91,7 @@ curl -s https://app.superplane.com/api/v1/me \
   -H "Authorization: Bearer $SUPERPLANE_TOKEN"
 ```
 
-A `200` response with user details confirms the token is valid. Any `401` or connection error means the token or host is incorrect.
+A `200` response with user details confirms the token is valid. A `401` or connection error usually means the token, host, or network path is wrong.
 
 ## Base URL and Conventions
 
@@ -101,7 +101,7 @@ A `200` response with user details confirms the token is valid. Any `401` or con
 | API prefix | `/api/v1/` |
 | Content-Type | `application/json` (request and response) |
 | Schemes | HTTPS (production), HTTP (local dev) |
-| Success status | `200` for all methods including POST and DELETE (gRPC-gateway convention) |
+| Success status | `200` for all methods, including POST and DELETE (gRPC-gateway convention) |
 | Pagination | Available on some list endpoints via `?limit=<int>&before=<RFC 3339 timestamp>` |
 
 ### Pagination
@@ -133,32 +133,32 @@ The API is organized into these resource groups. Every path is under `/api/v1/`.
 
 | Resource | Key Paths | Operations |
 | --- | --- | --- |
-| **Actions** | `actions`, `actions/{name}` | List, describe |
-| **Agents** | `agents/chats`, `agents/chats/{chatId}`, `.../messages`, `.../resume` | List, create, describe, delete, list messages, resume |
+| **Actions** | `actions`, `actions/{name}` | list, describe |
+| **Agents** | `agents/chats`, `agents/chats/{chatId}`, `.../messages`, `.../resume` | list, create, describe, delete, list messages, resume |
 | **Blueprints** | `blueprints`, `blueprints/{id}` | CRUD |
 | **Canvases** | `canvases`, `canvases/{id}` | CRUD |
-| **Canvas Versions** | `canvases/{canvasId}/versions`, `.../versions/{versionId}`, `.../publish`, `.../validate` | List, create, describe, update, delete, publish, validate |
-| **Change Requests** | `canvases/{canvasId}/change-requests`, `.../{changeRequestId}`, `.../actions`, `.../resolve` | List, create, describe, act (approve/reject/publish), resolve conflicts |
-| **Canvas Events** | `canvases/{canvasId}/events`, `.../events/{eventId}/executions` | List events, list executions per event |
-| **Node Executions** | `canvases/{canvasId}/nodes/{nodeId}/executions`, `.../events`, `.../pause`, `.../queue` | List, cancel, invoke hooks, manage queue |
-| **Memory** | `canvases/{canvasId}/memory`, `.../memory/{memoryId}` | Get, delete |
+| **Canvas Versions** | `canvases/{canvasId}/versions`, `.../versions/{versionId}`, `.../publish`, `.../validate` | list, create, describe, update, delete, publish, validate |
+| **Change Requests** | `canvases/{canvasId}/change-requests`, `.../{changeRequestId}`, `.../actions`, `.../resolve` | list, create, describe, act (approve/reject/publish), resolve conflicts |
+| **Canvas Events** | `canvases/{canvasId}/events`, `.../events/{eventId}/executions` | list events, list executions per event |
+| **Node Executions** | `canvases/{canvasId}/nodes/{nodeId}/executions`, `.../events`, `.../pause`, `.../queue` | list, cancel, invoke hooks, manage queue |
+| **Memory** | `canvases/{canvasId}/memory`, `.../memory/{memoryId}` | get, delete |
 | **Groups** | `groups`, `groups/{groupName}`, `.../users`, `.../users/remove` | CRUD, manage members |
-| **Integrations** | `integrations` | List integration types |
+| **Integrations** | `integrations` | list integration types |
 | **Organization Integrations** | `organizations/{id}/integrations`, `.../{integrationId}`, `.../resources`, `.../properties`, `.../secrets`, `.../capabilities`, `.../next`, `.../previous` | CRUD connected integrations, list resources, update config/capabilities, navigate versions |
-| **Invitations** | `organizations/{id}/invitations`, `.../{invitationId}`, `invite-links/{token}/accept` | List, create, revoke email invitations, accept invite-link token |
-| **Invite Link Management** | `organizations/{id}/invite-link`, `.../invite-link/reset` | Get/update invite-link settings, rotate token |
-| **Me** | `me`, `me/token` | Get current user, regenerate token |
-| **Organizations** | `organizations/{id}`, `.../agent-settings`, `.../agent-settings/openai-key`, `.../usage`, `.../users/{userId}`, `.../invite-link`, `.../invite-link/reset` | Describe/update org, manage agent settings and OpenAI key, inspect usage, manage membership and invite-link settings |
+| **Invitations** | `organizations/{id}/invitations`, `.../{invitationId}`, `invite-links/{token}/accept` | list, create, revoke email invitations, accept invite-link token |
+| **Invite Link Management** | `organizations/{id}/invite-link`, `.../invite-link/reset` | get/update invite-link settings, rotate token |
+| **Me** | `me`, `me/token` | get current user, regenerate token |
+| **Organizations** | `organizations/{id}`, `.../agent-settings`, `.../agent-settings/openai-key`, `.../usage`, `.../users/{userId}`, `.../invite-link`, `.../invite-link/reset` | describe/update org, manage agent settings and OpenAI key, inspect usage, manage membership and invite-link settings |
 | **Roles** | `roles`, `roles/{roleName}`, `.../users` | CRUD, list members |
 | **Secrets** | `secrets`, `secrets/{idOrName}`, `.../keys/{keyName}`, `.../name` | CRUD, manage keys, rename |
 | **Service Accounts** | `service-accounts`, `service-accounts/{id}`, `.../token` | CRUD, regenerate token |
-| **Triggers** | `triggers`, `triggers/{name}` | List, describe |
-| **Users** | `users` | List |
-| **Widgets** | `widgets`, `widgets/{name}` | List, describe |
+| **Triggers** | `triggers`, `triggers/{name}` | list, describe |
+| **Users** | `users` | list |
+| **Widgets** | `widgets`, `widgets/{name}` | list, describe |
 
 ## Typical Agent Workflow
 
-1. **Fetch the spec** — one GET to the public endpoint, cache for the session.
+1. **Fetch the spec** — make one GET request to the public endpoint, then cache it for the session.
 2. **Authenticate** — set `Authorization: Bearer <TOKEN>` on API requests.
 3. **Verify** — `GET /api/v1/me` to confirm the token works.
 4. **Discover** — list canvases, integrations, triggers, or components to understand what exists.
