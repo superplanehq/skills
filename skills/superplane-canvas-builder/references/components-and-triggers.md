@@ -35,7 +35,7 @@ headers:
     value: application/json
 ```
 
-Channels: `default`
+Channels: `success`, `failure`
 
 ### Filter (`filter`)
 
@@ -98,10 +98,39 @@ Channels: `default`
 | `command` | Yes | Command (supports expressions) |
 | `privateKey` | No | Reference a secret |
 
-Channels: `default`
+Channels: `success`, `failed`
 
 ### No Operation (`noop`)
 
 No configuration. Pass-through.
 
 Channels: `default`
+
+### Read Memory (`readMemory`)
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `namespace` | Yes | Memory namespace |
+| `matchList` | Yes | List of `{ name, value }` to match |
+| `resultMode` | No | `latest` (default) or `all` |
+
+Channels: `found`, `notFound`
+
+### Upsert Memory (`upsertMemory`)
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `namespace` | Yes | Memory namespace |
+| `matchList` | Yes | List of `{ name, value }` to match |
+| `valueList` | Yes | List of `{ name, value }` to store |
+
+Channels: `default`
+
+### Delete Memory (`deleteMemory`)
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `namespace` | Yes | Memory namespace |
+| `matchList` | Yes | List of `{ name, value }` to match |
+
+Channels: `deleted`, `notFound`
