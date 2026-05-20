@@ -20,6 +20,7 @@ npx skills add superplanehq/skills --skill superplane-cli
 | --- | --- |
 | **superplane-cli** | Operate SuperPlane via CLI — auth, canvases, secrets, runs |
 | **superplane-canvas-builder** | Design workflow canvases from requirements |
+| **superplane-dashboard-and-widgets** | Create and manage SuperPlane canvas dashboards via CLI |
 | **superplane-monitor** | Debug and inspect workflow executions |
 
 ## Running Evals
@@ -57,4 +58,3 @@ After every run:
 - `evals/reports/<run_id>/summary.json` — machine-readable totals + per-case stats
 - `evals/reports/<run_id>/<case_name>.json` — full per-case detail (bash commands, files written, response text)
 - `tmp/evals/<run_id>-NN-<case_name>.log` — timestamped event log per case
-
