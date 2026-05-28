@@ -26,6 +26,10 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Auto layout full canvas | `superplane canvases update <name-or-id> --draft --auto-layout horizontal` |
 | Auto layout connected subgraph | `superplane canvases update <name-or-id> --draft --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
 | Auto layout exact selected set | `superplane canvases update <name-or-id> --draft --auto-layout horizontal --auto-layout-scope exact-set --auto-layout-node <node-a> --auto-layout-node <node-b>` |
+| Export live console | `superplane console get <name-or-id> -o yaml > console.yaml` |
+| Export draft console | `superplane console get <name-or-id> --draft -o yaml > console.yaml` |
+| Update console from file | `superplane console set <name-or-id> -f console.yaml` |
+| Update console draft only | `superplane console set <name-or-id> -f console.yaml --draft` |
 | List available providers | `superplane index integrations` |
 | Describe a provider | `superplane index integrations --name github` |
 | List connected integrations | `superplane integrations list` |
@@ -151,6 +155,39 @@ Workflow rules:
 
 See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
 
+### Console YAML via CLI
+
+Use `superplane console` to read and replace the per-canvas console: panels plus grid layout.
+
+Commands:
+
+```bash
+# With an explicit canvas name or id
+superplane console get <name-or-id>
+superplane console get <name-or-id> --draft
+superplane console get <name-or-id> -o yaml > console.yaml
+superplane console get <name-or-id> --draft -o yaml > console.yaml
+superplane console set <name-or-id> -f console.yaml
+superplane console set <name-or-id> --file console.yaml
+superplane console set <name-or-id> console.yaml
+superplane console set <name-or-id> -f - < console.yaml
+
+# With the active canvas from `superplane canvases active`
+superplane console get
+superplane console set -f console.yaml
+superplane console set -f console.yaml --draft
+```
+
+Behavior:
+- `get` reads the live console by default.
+- `get --draft` reads the current user's existing draft console. It does not create a draft.
+- `set` always writes panels and layout to the current user's draft version.
+- On `set`, `--draft` keeps the operation explicitly draft-only; it does not change the target from live to draft.
+- Console import is replace-all: the YAML replaces every panel and layout entry.
+- Use `-o yaml` when exporting a file intended for editing/import.
+
+See [Console YAML Spec](references/console-yaml-spec.md) for the stable YAML envelope, layout fields, and where to find current widget details.
+
 ### Auto Layout via CLI
 
 Use `canvases update` with auto-layout flags:
@@ -255,3 +292,4 @@ For agents that can fetch URLs, the full SuperPlane docs are available in LLM-fr
 ## References
 
 - [Canvas YAML Spec](references/canvas-yaml-spec.md) — Full YAML format with examples
+- [Console YAML Spec](references/console-yaml-spec.md) — Stable console YAML envelope and layout format
