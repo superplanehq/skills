@@ -186,7 +186,7 @@ Behavior:
 - Console import is replace-all: the YAML replaces every panel and layout entry.
 - Use `-o yaml` when exporting a file intended for editing/import.
 
-See [Console YAML Spec](references/console-yaml-spec.md) for panel types, layout fields, and examples.
+See [Console YAML Spec](references/console-yaml-spec.md) for the stable YAML envelope, layout fields, and where to find current widget details.
 
 ### Auto Layout via CLI
 
@@ -292,4 +292,4 @@ For agents that can fetch URLs, the full SuperPlane docs are available in LLM-fr
 ## References
 
 - [Canvas YAML Spec](references/canvas-yaml-spec.md) — Full YAML format with examples
-- [Console YAML Spec](references/console-yaml-spec.md) — Console panel and layout YAML format
+- [Console YAML Spec](references/console-yaml-spec.md) — Stable console YAML envelope and layout format

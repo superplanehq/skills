@@ -42,7 +42,16 @@ superplane console set -f console.yaml
 - Import is replace-all: the submitted `spec.panels` and `spec.layout` replace all existing console panels and layout entries.
 - `metadata.canvasId` and `metadata.name` are informational on import.
 
-## Structure
+## Current Widget Details
+
+Console widgets change frequently. Before authoring or editing non-trivial panel `content`, read the product console guide:
+
+- Mounted agent resource: `ref/docs/prd/console-and-widgets.md`
+- Canonical source: https://github.com/superplanehq/superplane/blob/main/docs/prd/console-and-widgets.md
+
+Use that guide as the source of truth for widget content schemas, table data sources, row actions, chart options, number aggregations, field formats, and implementation files that must stay in sync.
+
+## Stable Structure
 
 ```yaml
 apiVersion: v1
@@ -74,248 +83,15 @@ Every panel needs:
 | Field | Required | Description |
 | --- | --- | --- |
 | `id` | Yes | Unique panel id within this console |
-| `type` | Yes | One of `markdown`, `node`, `nodes`, `table`, `chart`, `number` |
-| `content` | Usually | Type-specific object; markdown may be empty |
+| `type` | Yes | One of the panel types documented in the product console guide |
+| `content` | Usually | Type-specific object; read the product console guide before editing widget content |
 
-Limits and validation:
+Stable validation rules:
 
 - Maximum panels: 50.
 - Encoded panel payload maximum: 1 MiB.
 - Panel ids must be unique.
 - Unsupported panel types are rejected.
-
-### Markdown Panel
-
-```yaml
-- id: intro
-  type: markdown
-  content:
-    title: Overview
-    body: "# Runbook\nUse this console during deploys."
-```
-
-Content fields:
-
-| Field | Required | Description |
-| --- | --- | --- |
-| `title` | No | String title |
-| `body` | No | Markdown body |
-
-### Node Panel
-
-```yaml
-- id: deploy-node
-  type: node
-  content:
-    title: Deploy
-    node: deploy-production
-    showRun: true
-    triggerName: manual
-```
-
-Content fields:
-
-| Field | Required | Description |
-| --- | --- | --- |
-| `node` | Yes | Canvas node id or name; may be an empty string while unconfigured |
-| `title` | No | String title |
-| `showRun` | No | Boolean; shows a manual-run button when allowed |
-| `triggerName` | No | Trigger template name for nodes with multiple triggers |
-
-### Nodes Panel
-
-```yaml
-- id: key-nodes
-  type: nodes
-  content:
-    title: Key Nodes
-    nodes:
-      - node: build
-        label: Build
-        description: Compile and test
-      - node: deploy-production
-        label: Deploy
-        showRun: true
-        triggerName: manual
-```
-
-Content fields:
-
-| Field | Required | Description |
-| --- | --- | --- |
-| `nodes` | Yes | Array; may be empty while unconfigured |
-| `title` | No | String title |
-
-Each `nodes[]` entry needs a non-empty `node` string. Optional entry fields: `label`, `description`, `showRun`, `triggerName`.
-
-### Shared Data Sources
-
-Table and chart panels use the shared data-source shapes. Number panels use these too, plus a composite memory form.
-
-```yaml
-dataSource:
-  kind: memory
-  namespace: deployment
-  fieldPath: items
-```
-
-```yaml
-dataSource:
-  kind: executions
-  node: deploy-production
-  limit: 100
-```
-
-```yaml
-dataSource:
-  kind: runs
-  limit: 100
-```
-
-Supported kinds:
-
-| Kind | Fields |
-| --- | --- |
-| `memory` | `namespace` string, optional `fieldPath` string |
-| `executions` | Optional `node` string, optional `limit` number |
-| `runs` | Optional `limit` number |
-
-### Table Panel
-
-```yaml
-- id: recent-failures
-  type: table
-  content:
-    title: Recent Failures
-    dataSource:
-      kind: executions
-      node: deploy-production
-      limit: 50
-    render:
-      kind: table
-      columns:
-        - field: status
-          label: Status
-        - field: ref
-          label: Ref
-      where:
-        - field: status
-          op: eq
-          value: failed
-      sort:
-        field: createdAt
-        order: desc
-```
-
-Required render fields:
-
-| Field | Required | Description |
-| --- | --- | --- |
-| `kind` | Yes | Must be `table` |
-| `columns` | Yes | Array of objects with non-empty `field` |
-
-Optional render fields:
-
-- `where`: array of filters. Supported ops: `eq`, `neq`, `contains`, `not_contains`, `gt`, `lt`, `exists`, `not_exists`.
-- `sort`: object with non-empty `field` and optional `order` of `asc` or `desc`.
-- `rowActions`: array of trigger actions. Each action must have `kind: trigger` and a `node` or `target`.
-
-### Chart Panel
-
-```yaml
-- id: runs-by-status
-  type: chart
-  content:
-    title: Runs by Status
-    dataSource:
-      kind: runs
-      limit: 100
-    render:
-      kind: chart
-      type: bar
-      xField: status
-      series:
-        - field: count
-          label: Runs
-      legend: auto
-      sort:
-        field: status
-        order: asc
-```
-
-Required render fields:
-
-| Field | Required | Description |
-| --- | --- | --- |
-| `kind` | Yes | Must be `chart` |
-| `type` | Yes | `bar`, `stacked-bar`, `line`, `area`, or `donut` |
-| `xField` | Yes | Non-empty field name |
-| `series` | Yes | Non-empty array |
-
-Optional render fields:
-
-- `series[]` may include string fields `field`, `label`, `color`, `format`, `prefix`, `suffix`.
-- `legend`: `auto`, `show`, or `hide`.
-- `sort`: object with non-empty `field` and optional `order` of `asc` or `desc`.
-
-### Number Panel
-
-```yaml
-- id: failed-runs
-  type: number
-  content:
-    title: Failed Runs
-    dataSource:
-      kind: runs
-      limit: 100
-    render:
-      kind: number
-      aggregation: count
-      label: Failed
-      prefix: ""
-      suffix: " runs"
-```
-
-Required render fields for normal data sources:
-
-| Field | Required | Description |
-| --- | --- | --- |
-| `kind` | Yes | Must be `number` |
-| `aggregation` | Yes | `count`, `sum`, `avg`, `min`, `max`, `first`, or `last` |
-| `field` | For non-`count` aggregations | Field to aggregate |
-
-Optional render fields: `prefix`, `suffix`.
-
-Composite memory number panels put aggregation on each source and omit render-level `aggregation` and `field`:
-
-```yaml
-- id: total-errors
-  type: number
-  content:
-    title: Total Errors
-    dataSource:
-      kind: memory
-      combine: sum
-      sources:
-        - namespace: api-errors
-          aggregation: sum
-          field: count
-        - namespace: worker-errors
-          aggregation: sum
-          field: count
-    render:
-      kind: number
-      suffix: " errors"
-```
-
-Composite memory rules:
-
-- `dataSource.sources` must be a non-empty array.
-- `dataSource.combine` must be `sum`, `min`, `max`, or `avg`.
-- Each source needs `namespace` and `aggregation`.
-- Source aggregation supports `count`, `sum`, `avg`, `min`, `max`, `first`, `last`.
-- Each non-`count` source aggregation needs `field`.
-- `fieldPath` is optional per source.
 
 ## Layout
 
