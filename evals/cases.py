@@ -46,10 +46,10 @@ cli_cases = _tagged("superplane-cli", [
     ),
     Case(
         name="missing_cli_refusal",
-        inputs="Create a new SuperPlane canvas named foo.",
+        inputs="Create a new SuperPlane app named foo.",
         evaluators=(
             RefusedBecauseMissingCli(),
-            BashCommandNotCalled(r"superplane\s+canvases\s+create"),
+            BashCommandNotCalled(r"superplane\s+apps\s+create"),
         ),
         metadata={"strip_cli": True},
     ),
@@ -67,7 +67,7 @@ cli_cases = _tagged("superplane-cli", [
 # No integrations are connected on the clean demo. Cases here test that the agent
 # produces a well-formed YAML referencing actions by exact name (the backend
 # may reject the apply, which is fine — we only validate YAML shape).
-canvas_cases = _tagged("superplane-canvas-builder", [
+canvas_cases = _tagged("superplane-app-builder", [
     Case(
         name="builtin_components_canvas",
         inputs=(
@@ -95,31 +95,31 @@ canvas_cases = _tagged("superplane-canvas-builder", [
         evaluators=(
             BashCommandCalled(r"superplane\s+integrations\s+list"),
             ResponseMentions("daytona"),
-            # The agent must not run `canvases create --file` against the backend when
+            # The agent must not run `apps create --canvas-file` against the backend when
             # the required integration is missing. Scaffolding via `init --output-file`
             # is acceptable; applying is not.
-            BashCommandNotCalled(r"superplane\s+canvases\s+create\s+.*--file"),
+            BashCommandNotCalled(r"superplane\s+apps\s+create\s+.*--canvas-file"),
         ),
     ),
     Case(
         name="starter_from_template",
         inputs=(
-            "Scaffold a starter SuperPlane canvas YAML for me. Use the CLI's `canvases init` "
+            "Scaffold a starter SuperPlane canvas YAML for me. Use the CLI's `apps canvas init` "
             "to generate it (you can pick any built-in template if one fits, otherwise use the "
             "default starter)."
         ),
         # The available templates change per-release; only assert that the agent reached for
-        # `canvases init` (with or without --template).
-        evaluators=(BashCommandCalled(r"superplane\s+canvases\s+init\b"),),
+        # `apps canvas init` (with or without --template).
+        evaluators=(BashCommandCalled(r"superplane\s+apps\s+canvas\s+init\b"),),
     ),
     Case(
         name="draft_update_flag",
         inputs=(
             "Update canvas 'my-canvas' to set its description to 'Eval test canvas'. "
             "Generate a minimal canvas YAML with that change and apply it with the CLI's draft flag "
-            "(the skill says always use `--draft` on `canvases update` in this environment)."
+            "(the skill says always use `--draft` on `apps canvas update` in this environment)."
         ),
-        evaluators=(BashCommandCalled(r"superplane\s+canvases\s+update\s+\S+\s+--draft"),),
+        evaluators=(BashCommandCalled(r"superplane\s+apps\s+canvas\s+update\s+\S+\s+--draft"),),
     ),
     Case(
         name="resource_verification",
@@ -172,7 +172,7 @@ canvas_cases = _tagged("superplane-canvas-builder", [
             # Triple-`.data.` (the envelope-double-counting bug) must NOT appear.
             FileContentNotMatches(r".*\.ya?ml$", r"\.data\.data\.data\."),
             # No applying the canvas — this is YAML-only, and Sentry isn't connected anyway.
-            BashCommandNotCalled(r"superplane\s+canvases\s+create\s+.*--file"),
+            BashCommandNotCalled(r"superplane\s+apps\s+create\s+.*--canvas-file"),
         ),
     ),
 ])
@@ -196,7 +196,7 @@ monitor_cases = _tagged("superplane-monitor", [
         name="stuck_execution",
         inputs=(
             "An execution on a node in canvas 'my-canvas' has been running for over an hour. "
-            "Run `superplane executions list --canvas-id <id>` for that canvas to inspect what's "
+            "Run `superplane executions list --app-id <id>` for that canvas to inspect what's "
             "going on, then summarize."
         ),
         evaluators=(BashCommandCalled(r"superplane\s+executions\s+list\b"),),

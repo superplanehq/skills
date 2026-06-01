@@ -1,13 +1,13 @@
 # Canvas YAML Specification
 
-Export with `superplane canvases get <name>`, or author from scratch.
+Export with `superplane apps canvas get <name>`, or author from scratch.
 
 > `auto_layout` is an update request option, not a persisted field in canvas YAML.
-> Use `superplane canvases update ... --auto-layout ...` to apply layout.
-> **Agent rule:** Never stop at `create`. Run a follow-up `update` so server-side defaults (including auto layout) are applied:
-> `superplane canvases create ...` then `superplane canvases update ... --draft`.
-> **Important:** `superplane canvases update --file canvas.yaml` requires `metadata.id` in that file. Right after `create --file`, prefer `superplane canvases update <name-or-id>` unless you first export and add `metadata.id`.
-> **Update rule:** in this environment, `superplane canvases update` should include `--draft` to udpate the personal draft.
+> Use `superplane apps canvas update ... --auto-layout ...` to apply layout.
+> `superplane apps create --canvas-file canvas.yaml` creates an app and sends the canvas payload in one command.
+> On `superplane apps create`, layout flags are prefixed with `canvas-`: `--canvas-auto-layout`, `--canvas-auto-layout-scope`, and `--canvas-auto-layout-node`.
+> **Important:** `superplane apps canvas update --file canvas.yaml` requires `metadata.id` in that file. Right after `apps create --canvas-file`, prefer `superplane apps canvas update <name-or-id>` unless you first export and add `metadata.id`.
+> **Update rule:** in this environment, `superplane apps canvas update` should include `--draft` to update the personal draft.
 
 ## Structure
 
@@ -198,7 +198,7 @@ GitHub push triggers Semaphore CI, then requires approval before deploy:
 apiVersion: v1
 kind: Canvas
 metadata:
-  id: <canvas-id>
+  id: <app-id>
   name: Deploy Pipeline
 spec:
   nodes:
@@ -253,24 +253,17 @@ spec:
 
 ## CLI Auto Layout Options
 
-Use these flags with `superplane canvases update`:
+Use these flags with `superplane apps canvas update`:
 
 ```bash
 # Layout connected component around seed node(s) (recommended default for existing canvases)
-superplane canvases update <name-or-id> --draft \
+superplane apps canvas update <name-or-id> --draft \
   --auto-layout horizontal \
   --auto-layout-scope connected-component \
   --auto-layout-node <node-id>
 
-# Layout only exact node set (best when nodes are pre-selected)
-superplane canvases update <name-or-id> --draft \
-  --auto-layout horizontal \
-  --auto-layout-scope exact-set \
-  --auto-layout-node <node-a> \
-  --auto-layout-node <node-b>
-
 # Full canvas layout (use sparingly; see policy below)
-superplane canvases update <name-or-id> --draft --auto-layout horizontal
+superplane apps canvas update <name-or-id> --draft --auto-layout horizontal
 ```
 
 Behavior:
@@ -282,10 +275,9 @@ Behavior:
   - with `--auto-layout-node` => connected component
 - Recommended policy:
   - Prefer connected-component for existing/disconnected canvases.
-  - Prefer exact-set when the user selected specific nodes.
   - Use full-canvas only for new/scratch canvases, mostly connected graphs, or explicit full-canvas requests.
 - Scope selection default:
   - If a changed/selected node ID is known, use connected-component + `--auto-layout-node`.
-  - If a set of changed node IDs is known, use exact-set + repeated `--auto-layout-node`.
+  - If a set of changed node IDs is known, use connected-component + repeated `--auto-layout-node`.
   - If no node IDs are available, use full-canvas.
 - Layout preserves the current top-left anchor of the laid-out region (relative positioning), so subgraphs do not jump unexpectedly across the canvas.

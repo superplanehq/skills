@@ -96,8 +96,8 @@ superplane whoami
 # this, the agent correctly stops at "canvas not found" before reaching the
 # diagnostic commands the skill teaches.
 log "creating eval canvas 'my-canvas'"
-if ! superplane canvases get my-canvas >/dev/null 2>&1; then
-  superplane canvases create my-canvas >/dev/null 2>&1 || \
+if ! superplane apps canvas get my-canvas >/dev/null 2>&1; then
+  superplane apps create my-canvas >/dev/null 2>&1 || \
     log "warning: failed to create my-canvas (continuing)"
 fi
 
