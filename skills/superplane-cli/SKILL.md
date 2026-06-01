@@ -1,6 +1,6 @@
 ---
 name: superplane-cli
-description: Use when working with the SuperPlane CLI to discover integrations, actions, and triggers, build or troubleshoot canvases, manage secrets, and monitor executions. Covers authentication, list/get commands, interpreting configuration schemas, wiring channels between nodes, resolving integration binding issues, and inspecting runs. Triggers on "superplane", "canvas", "workflow", "CLI", "connect", "integration is required", "execution".
+description: Use when working with the SuperPlane CLI to discover integrations, actions, and triggers, build or troubleshoot apps and canvases, manage secrets, and monitor executions. Covers authentication, list/get commands, interpreting configuration schemas, wiring channels between nodes, resolving integration binding issues, and inspecting runs. Triggers on "superplane", "app", "canvas", "workflow", "CLI", "connect", "integration is required", "execution".
 ---
 
 # SuperPlane CLI
@@ -13,23 +13,27 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | --- | --- |
 | Connect to org | `superplane connect <URL> <TOKEN>` |
 | Who am I | `superplane whoami` |
-| Set active canvas | `superplane canvases active [canvas-id]` |
+| Set active app | `superplane apps active [app-id]` |
 | List/switch contexts | `superplane contexts` |
-| List canvases | `superplane canvases list` |
-| Generate starter YAML | `superplane canvases init` |
-| Generate from template | `superplane canvases init --template <name>` |
-| List canvas templates | `superplane canvases init --list-templates` |
-| Create canvas | `superplane canvases create <name>` then `superplane canvases update <name> --draft` |
-| Create canvas from YAML | `superplane canvases create --file canvas.yaml` |
-| Export canvas | `superplane canvases get <name>` |
-| Update canvas | `superplane canvases update <name-or-id> --draft --file canvas.yaml` |
-| Auto layout full canvas | `superplane canvases update <name-or-id> --draft --auto-layout horizontal` |
-| Auto layout connected subgraph | `superplane canvases update <name-or-id> --draft --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
-| Auto layout exact selected set | `superplane canvases update <name-or-id> --draft --auto-layout horizontal --auto-layout-scope exact-set --auto-layout-node <node-a> --auto-layout-node <node-b>` |
-| Export live console | `superplane console get <name-or-id> -o yaml > console.yaml` |
-| Export draft console | `superplane console get <name-or-id> --draft -o yaml > console.yaml` |
-| Update console from file | `superplane console set <name-or-id> -f console.yaml` |
-| Update console draft only | `superplane console set <name-or-id> -f console.yaml --draft` |
+| List apps | `superplane apps list` |
+| Generate starter YAML | `superplane apps canvas init` |
+| Generate from template | `superplane apps canvas init --template <name>` |
+| List canvas templates | `superplane apps canvas init --list-templates` |
+| Create app | `superplane apps create <name>` then `superplane apps canvas update <name> --draft` |
+| Create app from canvas YAML | `superplane apps create --canvas-file canvas.yaml` |
+| Create app with layout flags | `superplane apps create --canvas-file canvas.yaml --canvas-auto-layout horizontal` |
+| Export canvas | `superplane apps canvas get <name>` |
+| Update canvas | `superplane apps canvas update <name-or-id> --draft --file canvas.yaml` |
+| Auto layout full canvas | `superplane apps canvas update <name-or-id> --draft --auto-layout horizontal` |
+| Auto layout connected subgraph | `superplane apps canvas update <name-or-id> --draft --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
+| Export live console | `superplane apps console get <name-or-id> -o yaml > console.yaml` |
+| Export draft console | `superplane apps console get <name-or-id> --draft -o yaml > console.yaml` |
+| Update console from file | `superplane apps console set <name-or-id> -f console.yaml` |
+| Update console draft only | `superplane apps console set <name-or-id> -f console.yaml --draft` |
+| List app files | `superplane apps files tree <name-or-id>` |
+| Show app file | `superplane apps files show <path> <name-or-id>` |
+| List change requests | `superplane apps change-requests list <name-or-id>` |
+| Create change request | `superplane apps change-requests create <name-or-id>` |
 | List available providers | `superplane index integrations` |
 | Describe a provider | `superplane index integrations --name github` |
 | List connected integrations | `superplane integrations list` |
@@ -43,10 +47,10 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Describe a trigger | `superplane index triggers --name github.onPush` |
 | List secrets | `superplane secrets list` |
 | Create secret | `superplane secrets create --file secret.yaml` |
-| List events | `superplane events list --canvas-id <id>` |
-| Trace event executions | `superplane events list-executions --canvas-id <id> --event-id <eid>` |
-| List node executions | `superplane executions list --canvas-id <id> --node-id <nid>` |
-| Cancel execution | `superplane executions cancel --canvas-id <id> --execution-id <eid>` |
+| List events | `superplane events list --app-id <id>` |
+| Trace event executions | `superplane events list-executions --app-id <id> --event-id <eid>` |
+| List node executions | `superplane executions list --app-id <id> --node-id <nid>` |
+| Cancel execution | `superplane executions cancel --app-id <id> --execution-id <eid>` |
 
 ## Verify CLI Is Installed
 
@@ -88,7 +92,7 @@ superplane whoami
 Versioning is always on in this environment. Do not branch on a canvas mode flag; use the draft update path for every canvas edit.
 
 ```bash
-superplane canvases update <name-or-id> --draft --file canvas.yaml
+superplane apps canvas update <name-or-id> --draft --file canvas.yaml
 ```
 
 ### 2. Discover What Exists
@@ -129,53 +133,54 @@ Use `superplane integrations list` first to find valid integration IDs.
 Generate a starter YAML, then create and iterate:
 
 ```bash
-superplane canvases init --output-file canvas.yaml
+superplane apps canvas init --output-file canvas.yaml
 # or start from a template:
-superplane canvases init --template health-check-monitor --output-file canvas.yaml
+superplane apps canvas init --template health-check-monitor --output-file canvas.yaml
 # edit canvas.yaml, then create:
-superplane canvases create --file canvas.yaml
+superplane apps create --canvas-file canvas.yaml
 # or create a blank canvas and iterate:
-superplane canvases create my-canvas
-superplane canvases update my-canvas --draft
-superplane canvases get my-canvas > canvas.yaml
+superplane apps create my-canvas
+superplane apps canvas update my-canvas --draft
+superplane apps canvas get my-canvas > canvas.yaml
 # edit canvas.yaml
-superplane canvases update my-canvas --draft --file canvas.yaml
+superplane apps canvas update my-canvas --draft --file canvas.yaml
 ```
 
-If you create a canvas from YAML, `create --file` already sends the full canvas payload. Do not assume a second update is required just to apply the graph:
+If you create an app from canvas YAML, `apps create --canvas-file` already sends the full canvas payload. Do not assume a second update is required just to apply the graph:
 
 ```bash
-superplane canvases create --file canvas.yaml
+superplane apps create --canvas-file canvas.yaml
 ```
 
 Workflow rules:
-- `superplane canvases create --file canvas.yaml` accepts the same resource-style Canvas YAML described in the spec (`apiVersion`, `kind`, `metadata`, `spec`).
-- Run a follow-up `superplane canvases update ...` only when you are intentionally changing the canvas after create, for example to apply additional edits from a file that includes `metadata.id`, or to run auto-layout with different flags than the defaults used on create.
-- In this environment, every `superplane canvases update ...` command should include `--draft`.
+- `superplane apps create --canvas-file canvas.yaml` accepts the same resource-style Canvas YAML described in the spec (`apiVersion`, `kind`, `metadata`, `spec`).
+- On `superplane apps create`, canvas layout flags are prefixed with `canvas-`: `--canvas-auto-layout`, `--canvas-auto-layout-scope`, and repeated `--canvas-auto-layout-node`.
+- Run a follow-up `superplane apps canvas update ...` only when you are intentionally changing the canvas after create, for example to apply additional edits from a file that includes `metadata.id`, or to run auto-layout with different flags than the defaults used on create.
+- In this environment, every `superplane apps canvas update ...` command should include `--draft`.
 
 See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
 
 ### Console YAML via CLI
 
-Use `superplane console` to read and replace the per-canvas console: panels plus grid layout.
+Use `superplane apps console` to read and replace the app console: panels plus grid layout.
 
 Commands:
 
 ```bash
-# With an explicit canvas name or id
-superplane console get <name-or-id>
-superplane console get <name-or-id> --draft
-superplane console get <name-or-id> -o yaml > console.yaml
-superplane console get <name-or-id> --draft -o yaml > console.yaml
-superplane console set <name-or-id> -f console.yaml
-superplane console set <name-or-id> --file console.yaml
-superplane console set <name-or-id> console.yaml
-superplane console set <name-or-id> -f - < console.yaml
+# With an explicit app name or id
+superplane apps console get <name-or-id>
+superplane apps console get <name-or-id> --draft
+superplane apps console get <name-or-id> -o yaml > console.yaml
+superplane apps console get <name-or-id> --draft -o yaml > console.yaml
+superplane apps console set <name-or-id> -f console.yaml
+superplane apps console set <name-or-id> --file console.yaml
+superplane apps console set <name-or-id> console.yaml
+superplane apps console set <name-or-id> -f - < console.yaml
 
-# With the active canvas from `superplane canvases active`
-superplane console get
-superplane console set -f console.yaml
-superplane console set -f console.yaml --draft
+# With the active app from `superplane apps active`
+superplane apps console get
+superplane apps console set -f console.yaml
+superplane apps console set -f console.yaml --draft
 ```
 
 Behavior:
@@ -190,46 +195,38 @@ See [Console YAML Spec](references/console-yaml-spec.md) for the stable YAML env
 
 ### Auto Layout via CLI
 
-Use `canvases update` with auto-layout flags:
+Use `apps canvas update` with auto-layout flags:
 
 Default agent behavior:
-- Auto layout is applied by default on `superplane canvases update` when no auto-layout flags are provided.
+- Auto layout is applied by default on `superplane apps canvas update` when no auto-layout flags are provided.
 - Use `--auto-layout` flags when you need explicit scope/seed-node control.
 - Include `--draft` on every update command in this environment.
 
 ```bash
 # connected component around one seed node (recommended default for existing canvases)
-superplane canvases update <name-or-id> --draft \
+superplane apps canvas update <name-or-id> --draft \
   --auto-layout horizontal \
   --auto-layout-scope connected-component \
   --auto-layout-node <node-id>
 
-# exact node set only (best when the user selected nodes)
-superplane canvases update <name-or-id> --draft \
-  --auto-layout horizontal \
-  --auto-layout-scope exact-set \
-  --auto-layout-node <node-a> \
-  --auto-layout-node <node-b>
-
 # full canvas (use sparingly; see policy below)
-superplane canvases update <name-or-id> --draft --auto-layout horizontal
+superplane apps canvas update <name-or-id> --draft --auto-layout horizontal
 ```
 
 Rules and behavior:
 - `--auto-layout` is required when using `--auto-layout-scope` or `--auto-layout-node`.
 - `--draft` is required on update commands in this environment.
 - Supported algorithm: `horizontal`.
-- Supported scopes: `full-canvas`, `connected-component`, `exact-set`.
+- Supported scopes: `full-canvas`, `connected-component`.
 - Default scope behavior:
   - If no seed nodes are provided: behaves like `full-canvas`.
   - If seed nodes are provided and scope omitted: behaves like `connected-component`.
 - Recommended policy for agents:
   - Prefer `connected-component` for existing/disconnected canvases.
-  - Prefer `exact-set` when the user selected specific nodes.
   - Use `full-canvas` only when creating from scratch, when the graph is one connected component, or when the user explicitly asks for full-canvas layout.
 - Scope selection default:
   - If a changed/selected node ID is known, use `connected-component` + `--auto-layout-node`.
-  - If a set of changed node IDs is known, use `exact-set` + repeated `--auto-layout-node`.
+  - If a set of changed node IDs is known, use `connected-component` + repeated `--auto-layout-node`.
   - If no node IDs are available, use `full-canvas`.
 - Positioning is anchor-preserving: the laid-out region keeps its top-left anchor relative to current canvas coordinates to avoid large jumps.
 
@@ -245,8 +242,8 @@ superplane secrets delete <name_or_id>
 ### 5. Monitor Runs
 
 ```bash
-superplane events list --canvas-id <id>
-superplane events list-executions --canvas-id <id> --event-id <eid>
+superplane events list --app-id <id>
+superplane events list-executions --app-id <id> --event-id <eid>
 ```
 
 ### 6. Troubleshooting Checklist
@@ -254,7 +251,7 @@ superplane events list-executions --canvas-id <id> --event-id <eid>
 Run after every canvas update:
 
 ```bash
-superplane canvases get <name>
+superplane apps canvas get <name>
 ```
 
 Check:
@@ -272,14 +269,14 @@ When a field type is `integration-resource` (like `repository` or `project`), th
 2. `superplane integrations get <id>` — inspect the connection
 3. Add `integration.id` to the node in the canvas YAML
 4. `superplane integrations list-resources --id <id> --type <type>` — find valid resource values
-5. `superplane canvases update <name-or-id> --draft --file canvas.yaml` — apply the fix
-6. `superplane canvases get <name>` — verify errors are cleared
+5. `superplane apps canvas update <name-or-id> --draft --file canvas.yaml` — apply the fix
+6. `superplane apps canvas get <name>` — verify errors are cleared
 
 ## When to Use Other Skills
 
 | Need | Use Skill |
 | --- | --- |
-| Design a canvas from requirements | superplane-canvas-builder |
+| Design a canvas from requirements | superplane-app-builder |
 | Debug a failed execution | superplane-monitor |
 
 ## Documentation

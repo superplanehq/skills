@@ -11,12 +11,12 @@ Inspect, debug, and manage workflow executions.
 
 | Task | Command |
 | --- | --- |
-| List events for canvas | `superplane events list --canvas-id <id>` |
-| Trace an event's executions | `superplane events list-executions --canvas-id <id> --event-id <eid>` |
-| List node executions | `superplane executions list --canvas-id <id> --node-id <nid>` |
-| Cancel execution | `superplane executions cancel --canvas-id <id> --execution-id <eid>` |
-| List queued items | `superplane queue list --canvas-id <id> --node-id <nid>` |
-| Delete queued item | `superplane queue delete --canvas-id <id> --node-id <nid> --item-id <iid>` |
+| List events for app | `superplane events list --app-id <id>` |
+| Trace an event's executions | `superplane events list-executions --app-id <id> --event-id <eid>` |
+| List node executions | `superplane executions list --app-id <id> --node-id <nid>` |
+| Cancel execution | `superplane executions cancel --app-id <id> --execution-id <eid>` |
+| List queued items | `superplane queue list --app-id <id> --node-id <nid>` |
+| Delete queued item | `superplane queue delete --app-id <id> --node-id <nid> --item-id <iid>` |
 
 ## Verify CLI Is Installed
 
@@ -39,21 +39,21 @@ If `whoami` fails because of authentication, DNS, timeout, or connection issues,
 If debugging will require canvas edits, apply them as draft updates:
 
 ```bash
-superplane canvases update <name-or-id> --draft --file canvas.yaml
+superplane apps canvas update <name-or-id> --draft --file canvas.yaml
 ```
 
 ## Debugging Workflow
 
-### 1. Find the Canvas
+### 1. Find the App
 
 ```bash
-superplane canvases list
+superplane apps list
 ```
 
 ### 2. List Recent Events
 
 ```bash
-superplane events list --canvas-id <canvas_id>
+superplane events list --app-id <app_id>
 ```
 
 Each event is a trigger firing that starts a run.
@@ -61,7 +61,7 @@ Each event is a trigger firing that starts a run.
 ### 3. Trace the Execution Chain
 
 ```bash
-superplane events list-executions --canvas-id <canvas_id> --event-id <event_id>
+superplane events list-executions --app-id <app_id> --event-id <event_id>
 ```
 
 Look for:
@@ -72,7 +72,7 @@ Look for:
 ### 4. Inspect a Node's History and Payloads
 
 ```bash
-superplane executions list --canvas-id <canvas_id> --node-id <node_id> -o yaml
+superplane executions list --app-id <app_id> --node-id <node_id> -o yaml
 ```
 
 Check if failures are recurring. For expression errors, inspect the actual payload structure:
@@ -93,7 +93,7 @@ For branching/channel issues, inspect `outputs` in execution YAML (not just top-
 Update the canvas, then trigger a new run from the UI or via a manual_run trigger.
 
 ```bash
-superplane canvases update <name-or-id> --draft --file canvas.yaml
+superplane apps canvas update <name-or-id> --draft --file canvas.yaml
 ```
 
 ## Common Failure Patterns
@@ -118,14 +118,14 @@ Node fails referencing a missing field. Check:
 
 Executions pile up without progressing:
 ```bash
-superplane queue list --canvas-id <id> --node-id <nid>
+superplane queue list --app-id <id> --node-id <nid>
 ```
 
 Causes: node is paused, Approval waiting for human input, Time Gate holding, external service unresponsive.
 
 Clear stuck items:
 ```bash
-superplane queue delete --canvas-id <id> --node-id <nid> --item-id <iid>
+superplane queue delete --app-id <id> --node-id <nid> --item-id <iid>
 ```
 
 ### Merge Never Fires
@@ -136,7 +136,7 @@ Merge waits for ALL incoming edges. If one branch is stuck, filtered out, or fai
 
 | Need | Use Skill |
 | --- | --- |
-| Create or modify a canvas | superplane-canvas-builder |
+| Create or modify a canvas | superplane-app-builder |
 | CLI commands and authentication | superplane-cli |
 
 ## Documentation

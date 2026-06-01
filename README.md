@@ -18,8 +18,8 @@ npx skills add superplanehq/skills --skill superplane-cli
 
 | Skill | Description |
 | --- | --- |
-| **superplane-cli** | Operate SuperPlane via CLI — auth, canvases, secrets, runs |
-| **superplane-canvas-builder** | Design workflow canvases from requirements |
+| **superplane-cli** | Operate SuperPlane via CLI — auth, apps, canvases, secrets, runs |
+| **superplane-app-builder** | Design workflow apps and canvases from requirements |
 | **superplane-monitor** | Debug and inspect workflow executions |
 
 ## Running Evals
@@ -34,6 +34,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 make evals                              # all 15 cases
 make evals CASES=push_to_slack          # one case
 make evals SKILL=superplane-cli         # all cases for one skill
+make evals.app                          # app-builder cases
 make evals.list                         # list case names without running
 ```
 
@@ -57,4 +58,3 @@ After every run:
 - `evals/reports/<run_id>/summary.json` — machine-readable totals + per-case stats
 - `evals/reports/<run_id>/<case_name>.json` — full per-case detail (bash commands, files written, response text)
 - `tmp/evals/<run_id>-NN-<case_name>.log` — timestamped event log per case
-

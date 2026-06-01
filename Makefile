@@ -20,7 +20,7 @@ SKILL ?=
 export EVAL_CASES := $(CASES)
 export EVAL_SKILL := $(SKILL)
 
-.PHONY: evals evals.list evals.shell evals.down evals.build evals.cli evals.canvas evals.monitor
+.PHONY: evals evals.list evals.shell evals.down evals.build evals.cli evals.app evals.canvas evals.monitor
 
 evals:
 	@mkdir -p evals/reports tmp
@@ -48,8 +48,10 @@ evals.down:
 evals.cli:
 	@$(MAKE) evals SKILL=superplane-cli
 
-evals.canvas:
-	@$(MAKE) evals SKILL=superplane-canvas-builder
+evals.app:
+	@$(MAKE) evals SKILL=superplane-app-builder
+
+evals.canvas: evals.app
 
 evals.monitor:
 	@$(MAKE) evals SKILL=superplane-monitor

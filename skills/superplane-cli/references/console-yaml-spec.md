@@ -1,36 +1,36 @@
 # Console YAML Specification
 
-Export with `superplane console get <name-or-id> -o yaml`, edit locally, then apply with `superplane console set <name-or-id> -f console.yaml`.
+Export with `superplane apps console get <app-name-or-id> -o yaml`, edit locally, then apply with `superplane apps console set <app-name-or-id> -f console.yaml`.
 
-The CLI command group is `console`. The user-facing YAML kind is always `Console`.
+The CLI command group is `apps console`. The user-facing YAML kind is always `Console`.
 
 ## Commands
 
 ```bash
 # Show summary for live console
-superplane console get <name-or-id>
+superplane apps console get <name-or-id>
 
 # Export live console as canonical YAML
-superplane console get <name-or-id> -o yaml > console.yaml
+superplane apps console get <name-or-id> -o yaml > console.yaml
 
 # Export the current user's existing draft console
-superplane console get <name-or-id> --draft -o yaml > console.yaml
+superplane apps console get <name-or-id> --draft -o yaml > console.yaml
 
 # Replace the current user's console draft from a file
-superplane console set <name-or-id> -f console.yaml
+superplane apps console set <name-or-id> -f console.yaml
 
 # Same, but keep the operation explicitly draft-only
-superplane console set <name-or-id> -f console.yaml --draft
+superplane apps console set <name-or-id> -f console.yaml --draft
 
 # Read YAML from stdin
-superplane console set <name-or-id> -f - < console.yaml
+superplane apps console set <name-or-id> -f - < console.yaml
 ```
 
-If a canvas is active via `superplane canvases active`, the canvas argument may be omitted:
+If an app is active via `superplane apps active`, the app argument may be omitted:
 
 ```bash
-superplane console get -o yaml > console.yaml
-superplane console set -f console.yaml
+superplane apps console get -o yaml > console.yaml
+superplane apps console set -f console.yaml
 ```
 
 ## Behavior

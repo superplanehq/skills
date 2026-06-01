@@ -49,7 +49,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--skill",
         metavar="NAME",
         help="Filter to cases tagged with this skill name (superplane-cli, "
-        "superplane-canvas-builder, superplane-monitor).",
+        "superplane-app-builder, superplane-monitor).",
     )
     parser.add_argument(
         "--list",

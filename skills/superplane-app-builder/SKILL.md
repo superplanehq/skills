@@ -1,11 +1,11 @@
 ---
-name: superplane-canvas-builder
-description: Design and build SuperPlane workflow canvases from requirements. Translates workflow descriptions into canvas YAML with triggers, actions, edges, and expressions. Use when the user wants to create a new workflow, build a canvas, design a pipeline, or wire up actions. Triggers on "build canvas", "create workflow", "design pipeline", "automate".
+name: superplane-app-builder
+description: Design and build SuperPlane workflow apps from requirements. Translates workflow descriptions into app canvas YAML with triggers, actions, edges, and expressions. Use when the user wants to create a new workflow app, build a canvas, design a pipeline, or wire up actions. Triggers on "build app", "build canvas", "create workflow", "design pipeline", "automate".
 ---
 
-# SuperPlane Canvas Builder
+# SuperPlane App Builder
 
-Translate workflow requirements into SuperPlane canvas YAML.
+Translate workflow requirements into SuperPlane apps and their canvas YAML.
 
 ## Quick Reference
 
@@ -15,9 +15,9 @@ Translate workflow requirements into SuperPlane canvas YAML.
 | Actions from integration | `superplane index actions --from <integration>` |
 | Describe an action | `superplane index actions --name <name>` |
 | List triggers | `superplane index triggers --from <integration>` |
-| Generate starter YAML | `superplane canvases init` |
-| Create canvas | `superplane canvases create --file canvas.yaml` |
-| Update canvas | `superplane canvases update <name-or-id> --draft -f canvas.yaml` |
+| Generate starter YAML | `superplane apps canvas init` |
+| Create app from canvas YAML | `superplane apps create --canvas-file canvas.yaml` |
+| Update canvas | `superplane apps canvas update <name-or-id> --draft -f canvas.yaml` |
 
 ## Order of Operations
 
@@ -50,10 +50,10 @@ If connection details are not available, **stop** and ask the user to connect/pr
 
 ### 1b. Apply Changes as Drafts
 
-Versioning is always on in this environment. Skip mode detection and use `--draft` on every `superplane canvases update` command.
+Versioning is always on in this environment. Skip mode detection and use `--draft` on every `superplane apps canvas update` command.
 
 ```bash
-superplane canvases update <name-or-id> --draft --file canvas.yaml
+superplane apps canvas update <name-or-id> --draft --file canvas.yaml
 ```
 
 ### 2. Understand the Workflow
@@ -183,7 +183,7 @@ Check these sources in order — use the first one available:
 
 1. **Existing executions** — inspect real payloads from prior runs (most reliable):
    ```bash
-   superplane executions list --canvas-id <id> --node-id <nid> -o yaml
+   superplane executions list --app-id <id> --node-id <nid> -o yaml
    ```
 
 2. **Provider reference files in this skill** — check the `references/` directory for the provider you are using. These contain payload examples and known gotchas.
@@ -209,34 +209,35 @@ When an action executes shell commands (e.g., `daytona.executeCommand`, `ssh`):
 Generate a starter YAML if starting from scratch:
 
 ```bash
-superplane canvases init --output-file canvas.yaml
+superplane apps canvas init --output-file canvas.yaml
 # or start from a template:
-superplane canvases init --template health-check-monitor --output-file canvas.yaml
+superplane apps canvas init --template health-check-monitor --output-file canvas.yaml
 ```
 
-Then create from the file or update an existing canvas:
+Then create an app from the file or update an existing app canvas:
 
 ```bash
-superplane canvases create --file canvas.yaml
+superplane apps create --canvas-file canvas.yaml
 # or update an existing canvas:
-superplane canvases update <name-or-id> --draft --file canvas.yaml
+superplane apps canvas update <name-or-id> --draft --file canvas.yaml
 ```
 
-When creating a new canvas from YAML, `create --file` already applies the graph in the file:
+When creating a new app from canvas YAML, `apps create --canvas-file` already applies the graph in the file:
 
 ```bash
-superplane canvases create --file canvas.yaml
+superplane apps create --canvas-file canvas.yaml
 ```
 
 Workflow rules:
-- `superplane canvases create --file canvas.yaml` accepts the resource-style Canvas YAML from the spec (`apiVersion`, `kind`, `metadata`, `spec`).
-- Only run `superplane canvases update ...` after create when you are intentionally applying additional changes, such as a later file that includes `metadata.id`, or explicit auto-layout flags different from the defaults used by create.
-- In this environment, every `superplane canvases update ...` command should include `--draft`.
+- `superplane apps create --canvas-file canvas.yaml` accepts the resource-style Canvas YAML from the spec (`apiVersion`, `kind`, `metadata`, `spec`).
+- On `superplane apps create`, canvas layout flags are prefixed with `canvas-`: `--canvas-auto-layout`, `--canvas-auto-layout-scope`, and repeated `--canvas-auto-layout-node`.
+- Only run `superplane apps canvas update ...` after create when you are intentionally applying additional changes, such as a later file that includes `metadata.id`, or explicit auto-layout flags different from the defaults used by create.
+- In this environment, every `superplane apps canvas update ...` command should include `--draft`.
 
 Then verify:
 
 ```bash
-superplane canvases get <name>
+superplane apps canvas get <name>
 ```
 
 Check for `errorMessage` or `warningMessage` on any node.
@@ -248,7 +249,7 @@ Before calling the canvas "ready", confirm all of the following:
 - Integration IDs resolved from `superplane integrations list`
 - Every `integration-resource` value verified via `superplane integrations list-resources`
 - Canvas created from the intended YAML payload
-- `superplane canvases get <name> -o yaml` shows empty `errorMessage` and `warningMessage` on all nodes
+- `superplane apps canvas get <name> -o yaml` shows empty `errorMessage` and `warningMessage` on all nodes
 - At least one real trigger run checked, including channel-level `outputs` from critical branching nodes
 
 ## Common Patterns

@@ -130,7 +130,7 @@ Two `.data` segments — not one, not three.
 - `root().data.data.issue.title` ← **correct**
 - `root().data.data.data.issue.title` ← **wrong** (double-counts the envelope)
 
-If a Sentry-driven node's expression resolves to `null`, the count of `.data` segments is the first thing to check. Inspect a real execution with `superplane executions list --canvas-id <id> --node-id <nid> -o yaml` and count the `data` keys from the outermost object — every `data` key in the path is one `.data` segment in the expression, and no more.
+If a Sentry-driven node's expression resolves to `null`, the count of `.data` segments is the first thing to check. Inspect a real execution with `superplane executions list --app-id <id> --node-id <nid> -o yaml` and count the `data` keys from the outermost object — every `data` key in the path is one `.data` segment in the expression, and no more.
 
 ### `actor` is at the envelope-`data` level, not under Sentry's `data`
 
