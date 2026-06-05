@@ -9,10 +9,56 @@ This file documents **built-in** (non-integration) actions and triggers. For int
 | Trigger | Key | Configuration |
 | --- | --- | --- |
 | Schedule | `schedule` | `type`: `minutes`/`hours`/`cron`, plus interval or expression |
-| Manual Run | `manual_run` | None — triggered from UI |
+| Manual Run | `start` | `templates` (required): at least one `{name, payload}`; optional `parameters` |
 | Webhook | `webhook` | Optional `secret` for HMAC validation |
 
 Integration triggers (GitHub, AWS, etc.) are discovered via `superplane index triggers --from <integration>`.
+
+### Manual Run (`start`)
+
+Never use `configuration: {}`. The UI Run button and the `run` hook both require at least one template.
+
+```yaml
+- id: trigger-manual
+  name: Manual Run
+  type: TYPE_TRIGGER
+  component: start
+  configuration:
+    templates:
+      - name: default
+        payload:
+          message: "Hello, World!"
+        parameters: []
+  position:
+    x: 120
+    y: 100
+  paused: false
+  isCollapsed: false
+```
+
+Each template needs:
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `name` | Yes | Template label used by the Run button and `run` hook |
+| `payload` | Yes | JSON object emitted on run (supports expressions) |
+| `parameters` | No | Run-form fields referenced in payload as `{{ parameters["name"] }}` |
+
+Parameterized example:
+
+```yaml
+configuration:
+  templates:
+    - name: greet
+      payload:
+        message: '{{ parameters["name"] }}'
+      parameters:
+        - name: name
+          type: string
+          defaultString: "World"
+```
+
+Channels: `default` (emits `manual.run` events)
 
 ## Built-in Actions
 

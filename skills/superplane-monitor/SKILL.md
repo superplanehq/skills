@@ -90,7 +90,7 @@ For branching/channel issues, inspect `outputs` in execution YAML (not just top-
 
 ### 5. Fix and Re-run
 
-Update the canvas, then trigger a new run from the UI or via a manual_run trigger.
+Update the canvas, then trigger a new run from the UI or via a `start` (Manual Run) trigger with configured templates.
 
 ```bash
 superplane apps canvas update <name-or-id> --draft --file canvas.yaml
