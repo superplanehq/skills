@@ -46,6 +46,28 @@ spec:
   isCollapsed: false
 ```
 
+### Manual Run Trigger (built-in)
+
+```yaml
+- id: trigger-manual
+  name: Manual Run
+  type: TYPE_TRIGGER
+  component: start
+  configuration:
+    templates:
+      - name: default
+        payload:
+          message: "Hello, World!"
+        parameters: []
+  position:
+    x: 120
+    y: 100
+  paused: false
+  isCollapsed: false
+```
+
+> **Do not use `configuration: {}` for Manual Run.** The UI Run button and the `run` hook require at least one template with `name` and `payload`. See [Components & Triggers Reference](../../superplane-app-builder/references/components-and-triggers.md#manual-run-start).
+
 ### Action Node
 
 ```yaml
