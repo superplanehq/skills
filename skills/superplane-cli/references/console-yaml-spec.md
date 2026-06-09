@@ -1,8 +1,19 @@
 # Console YAML Specification
 
-Export with `superplane apps console get <app-name-or-id> -o yaml`, edit locally, then apply with `superplane apps console set <app-name-or-id> -f console.yaml`.
+Export with `superplane apps console get <app-name-or-id> -o yaml`, edit locally, then apply with `superplane apps console set --draft-id <draft-id> -f console.yaml`.
 
 The CLI command group is `apps console`. The user-facing YAML kind is always `Console`.
+
+## Draft id
+
+Resolve the target draft before read/write:
+
+```bash
+superplane apps drafts list <name-or-id>
+superplane apps drafts create <name-or-id> [--name "..."]
+```
+
+Use the returned id as `--draft-id` on every console command below.
 
 ## Commands
 
@@ -13,32 +24,30 @@ superplane apps console get <name-or-id>
 # Export live console as canonical YAML
 superplane apps console get <name-or-id> -o yaml > console.yaml
 
-# Export the current user's existing draft console
-superplane apps console get <name-or-id> --draft -o yaml > console.yaml
+# Export a specific draft console
+superplane apps console get <name-or-id> --draft-id <draft-id> -o yaml > console.yaml
 
-# Replace the current user's console draft from a file
-superplane apps console set <name-or-id> -f console.yaml
-
-# Same, but keep the operation explicitly draft-only
-superplane apps console set <name-or-id> -f console.yaml --draft
+# Replace a draft console from a file
+superplane apps console set --draft-id <draft-id> -f console.yaml
+superplane apps console set <name-or-id> --draft-id <draft-id> -f console.yaml
 
 # Read YAML from stdin
-superplane apps console set <name-or-id> -f - < console.yaml
+superplane apps console set <name-or-id> --draft-id <draft-id> -f - < console.yaml
 ```
 
 If an app is active via `superplane apps active`, the app argument may be omitted:
 
 ```bash
+superplane apps drafts list
 superplane apps console get -o yaml > console.yaml
-superplane apps console set -f console.yaml
+superplane apps console set --draft-id <draft-id> -f console.yaml
 ```
 
 ## Behavior
 
-- `get` reads the live console by default.
-- `get --draft` reads the current user's existing draft console and errors if no draft exists.
-- `set` always writes to the current user's draft version.
-- `set --draft` keeps the operation explicitly draft-only.
+- `get` without `--draft-id` reads the live console.
+- `get --draft-id` reads that draft's console and errors if the id is invalid or not a draft you own.
+- `set --draft-id` writes panels and layout to the specified draft version.
 - Import is replace-all: the submitted `spec.panels` and `spec.layout` replace all existing console panels and layout entries.
 - `metadata.canvasId` and `metadata.name` are informational on import.
 

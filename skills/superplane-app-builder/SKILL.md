@@ -17,7 +17,7 @@ Translate workflow requirements into SuperPlane apps and their canvas YAML.
 | List triggers | `superplane index triggers --from <integration>` |
 | Generate starter YAML | `superplane apps canvas init` |
 | Create app from canvas YAML | `superplane apps create --canvas-file canvas.yaml` |
-| Update canvas | `superplane apps canvas update <name-or-id> --draft -f canvas.yaml` |
+| Update canvas | `superplane apps canvas update --draft-id <draft-id> -f canvas.yaml` |
 
 ## Order of Operations
 
@@ -50,10 +50,14 @@ If connection details are not available, **stop** and ask the user to connect/pr
 
 ### 1b. Apply Changes as Drafts
 
-Versioning is always on in this environment. Skip mode detection and use `--draft` on every `superplane apps canvas update` command.
+Versioning is always on in this environment. Resolve a draft id, then pass `--draft-id` on every canvas and console draft command.
 
 ```bash
-superplane apps canvas update <name-or-id> --draft --file canvas.yaml
+superplane apps drafts list <name-or-id>
+# or when no draft exists yet:
+superplane apps drafts create <name-or-id>
+
+superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
 ```
 
 ### 2. Understand the Workflow
@@ -219,7 +223,8 @@ Then create an app from the file or update an existing app canvas:
 ```bash
 superplane apps create --canvas-file canvas.yaml
 # or update an existing canvas:
-superplane apps canvas update <name-or-id> --draft --file canvas.yaml
+superplane apps drafts list <name-or-id>   # or drafts create
+superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
 ```
 
 When creating a new app from canvas YAML, `apps create --canvas-file` already applies the graph in the file:
@@ -232,7 +237,7 @@ Workflow rules:
 - `superplane apps create --canvas-file canvas.yaml` accepts the resource-style Canvas YAML from the spec (`apiVersion`, `kind`, `metadata`, `spec`).
 - On `superplane apps create`, canvas layout flags are prefixed with `canvas-`: `--canvas-auto-layout`, `--canvas-auto-layout-scope`, and repeated `--canvas-auto-layout-node`.
 - Only run `superplane apps canvas update ...` after create when you are intentionally applying additional changes, such as a later file that includes `metadata.id`, or explicit auto-layout flags different from the defaults used by create.
-- In this environment, every `superplane apps canvas update ...` command should include `--draft`.
+- Resolve a draft id with `apps drafts list` or `apps drafts create`, then include `--draft-id` on every draft canvas/console command.
 
 Then verify:
 

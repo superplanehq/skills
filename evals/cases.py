@@ -116,10 +116,11 @@ canvas_cases = _tagged("superplane-app-builder", [
         name="draft_update_flag",
         inputs=(
             "Update canvas 'my-canvas' to set its description to 'Eval test canvas'. "
-            "Generate a minimal canvas YAML with that change and apply it with the CLI's draft flag "
-            "(the skill says always use `--draft` on `apps canvas update` in this environment)."
+            "Generate a minimal canvas YAML with that change and apply it with the CLI using "
+            "`--draft-id` on `apps canvas update` (the skill says always resolve a draft id and "
+            "pass `--draft-id` in this environment)."
         ),
-        evaluators=(BashCommandCalled(r"superplane\s+apps\s+canvas\s+update\s+\S+\s+--draft"),),
+        evaluators=(BashCommandCalled(r"superplane\s+apps\s+canvas\s+update\s+\S+\s+--draft-id\s+\S+"),),
     ),
     Case(
         name="resource_verification",
