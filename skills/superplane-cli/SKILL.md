@@ -19,21 +19,24 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Generate starter YAML | `superplane apps canvas init` |
 | Generate from template | `superplane apps canvas init --template <name>` |
 | List canvas templates | `superplane apps canvas init --list-templates` |
-| Create app | `superplane apps create <name>` then `superplane apps canvas update <name> --draft` |
+| Create app | `superplane apps create <name>` then resolve a draft id and `superplane apps canvas update --draft-id <draft-id> -f canvas.yaml` |
 | Create app from canvas YAML | `superplane apps create --canvas-file canvas.yaml` |
 | Create app with layout flags | `superplane apps create --canvas-file canvas.yaml --canvas-auto-layout horizontal` |
-| Export canvas | `superplane apps canvas get <name>` |
-| Update canvas | `superplane apps canvas update <name-or-id> --draft --file canvas.yaml` |
-| Auto layout full canvas | `superplane apps canvas update <name-or-id> --draft --auto-layout horizontal` |
-| Auto layout connected subgraph | `superplane apps canvas update <name-or-id> --draft --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id>` |
+| List drafts | `superplane apps drafts list <name-or-id>` |
+| Create draft | `superplane apps drafts create <name-or-id> [--name "..."]` |
+| Delete draft | `superplane apps drafts delete <draft-id> [name-or-id]` |
+| Export canvas (live) | `superplane apps canvas get <name-or-id>` |
+| Export canvas (draft) | `superplane apps canvas get <name-or-id> --draft-id <draft-id> -o yaml` |
+| Update canvas | `superplane apps canvas update --draft-id <draft-id> -f canvas.yaml` |
+| Auto layout full canvas | `superplane apps canvas update --draft-id <draft-id> --auto-layout horizontal -f canvas.yaml` |
+| Auto layout connected subgraph | `superplane apps canvas update --draft-id <draft-id> --auto-layout horizontal --auto-layout-scope connected-component --auto-layout-node <node-id> -f canvas.yaml` |
 | Export live console | `superplane apps console get <name-or-id> -o yaml > console.yaml` |
-| Export draft console | `superplane apps console get <name-or-id> --draft -o yaml > console.yaml` |
-| Update console from file | `superplane apps console set <name-or-id> -f console.yaml` |
-| Update console draft only | `superplane apps console set <name-or-id> -f console.yaml --draft` |
+| Export draft console | `superplane apps console get <name-or-id> --draft-id <draft-id> -o yaml > console.yaml` |
+| Update console from file | `superplane apps console set --draft-id <draft-id> -f console.yaml` |
 | List app files | `superplane apps files tree <name-or-id>` |
 | Show app file | `superplane apps files show <path> <name-or-id>` |
 | List change requests | `superplane apps change-requests list <name-or-id>` |
-| Create change request | `superplane apps change-requests create <name-or-id>` |
+| Create change request | `superplane apps change-requests create <name-or-id> [--draft-id <draft-id>]` |
 | List available providers | `superplane index integrations` |
 | Describe a provider | `superplane index integrations --name github` |
 | List connected integrations | `superplane integrations list` |
@@ -87,12 +90,34 @@ superplane connect https://superplane.example.com <API_TOKEN>
 superplane whoami
 ```
 
-### 1b. Apply Canvas Changes as Drafts
+### 1b. Draft Management
 
-Versioning is always on in this environment. Do not branch on a canvas mode flag; use the draft update path for every canvas edit.
+Versioning is always on in this environment. Every canvas or console read/write against a draft must include `--draft-id <uuid>`.
+
+Resolve the draft id before editing:
 
 ```bash
-superplane apps canvas update <name-or-id> --draft --file canvas.yaml
+# List drafts for the app (yours by default; --all for every owner)
+superplane apps drafts list <name-or-id>
+
+# Create a draft when none exists yet
+superplane apps drafts create <name-or-id> [--name "wip"]
+
+# Read, update, and verify using the id
+superplane apps canvas get <name-or-id> --draft-id <draft-id> -o yaml
+superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
+superplane apps console get <name-or-id> --draft-id <draft-id> -o yaml
+superplane apps console set --draft-id <draft-id> -f console.yaml
+```
+
+Rules:
+- Users can own **multiple drafts** per app. Always pass `--draft-id`; do not rely on implicit draft selection.
+- Reuse the id from a prior update response, `apps drafts list`, or agent `[Draft Status]` context when continuing work.
+- `--version-id` is an alias for `--draft-id` on canvas, console, and change-request commands.
+- `superplane apps drafts delete <draft-id> [name-or-id]` discards a draft (no confirmation prompt).
+
+```bash
+superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
 ```
 
 ### 2. Discover What Exists
@@ -140,10 +165,10 @@ superplane apps canvas init --template health-check-monitor --output-file canvas
 superplane apps create --canvas-file canvas.yaml
 # or create a blank canvas and iterate:
 superplane apps create my-canvas
-superplane apps canvas update my-canvas --draft
-superplane apps canvas get my-canvas > canvas.yaml
-# edit canvas.yaml
-superplane apps canvas update my-canvas --draft --file canvas.yaml
+DRAFT_ID=$(superplane apps drafts create my-canvas -o json | jq -r '.metadata.id')
+superplane apps canvas get my-canvas --draft-id "$DRAFT_ID" -o yaml > canvas.yaml
+# edit canvas.yaml (ensure metadata.id is set)
+superplane apps canvas update --draft-id "$DRAFT_ID" -f canvas.yaml
 ```
 
 If you create an app from canvas YAML, `apps create --canvas-file` already sends the full canvas payload. Do not assume a second update is required just to apply the graph:
@@ -156,7 +181,7 @@ Workflow rules:
 - `superplane apps create --canvas-file canvas.yaml` accepts the same resource-style Canvas YAML described in the spec (`apiVersion`, `kind`, `metadata`, `spec`).
 - On `superplane apps create`, canvas layout flags are prefixed with `canvas-`: `--canvas-auto-layout`, `--canvas-auto-layout-scope`, and repeated `--canvas-auto-layout-node`.
 - Run a follow-up `superplane apps canvas update ...` only when you are intentionally changing the canvas after create, for example to apply additional edits from a file that includes `metadata.id`, or to run auto-layout with different flags than the defaults used on create.
-- In this environment, every `superplane apps canvas update ...` command should include `--draft`.
+- Resolve a draft id with `apps drafts list` or `apps drafts create`, then include `--draft-id` on every canvas/console draft command.
 
 See [Canvas YAML Spec](references/canvas-yaml-spec.md) for the full format.
 
@@ -167,27 +192,26 @@ Use `superplane apps console` to read and replace the app console: panels plus g
 Commands:
 
 ```bash
-# With an explicit app name or id
+# With an explicit app name or id (replace <draft-id> from apps drafts list/create)
 superplane apps console get <name-or-id>
-superplane apps console get <name-or-id> --draft
+superplane apps console get <name-or-id> --draft-id <draft-id>
 superplane apps console get <name-or-id> -o yaml > console.yaml
-superplane apps console get <name-or-id> --draft -o yaml > console.yaml
-superplane apps console set <name-or-id> -f console.yaml
-superplane apps console set <name-or-id> --file console.yaml
-superplane apps console set <name-or-id> console.yaml
-superplane apps console set <name-or-id> -f - < console.yaml
+superplane apps console get <name-or-id> --draft-id <draft-id> -o yaml > console.yaml
+superplane apps console set --draft-id <draft-id> -f console.yaml
+superplane apps console set <name-or-id> --draft-id <draft-id> -f console.yaml
+superplane apps console set <name-or-id> --draft-id <draft-id> -f - < console.yaml
 
 # With the active app from `superplane apps active`
 superplane apps console get
-superplane apps console set -f console.yaml
-superplane apps console set -f console.yaml --draft
+superplane apps drafts list
+superplane apps console set --draft-id <draft-id> -f console.yaml
 ```
 
 Behavior:
-- `get` reads the live console by default.
-- `get --draft` reads the current user's existing draft console. It does not create a draft.
-- `set` always writes panels and layout to the current user's draft version.
-- On `set`, `--draft` keeps the operation explicitly draft-only; it does not change the target from live to draft.
+- `get` without `--draft-id` reads the live console.
+- `get --draft-id` reads that draft's console YAML.
+- `set --draft-id` writes panels and layout to the specified draft version.
+- When change management is enabled, `set` may auto-create a change request unless you are targeting a draft-only workflow via explicit draft id (see CLI help).
 - Console import is replace-all: the YAML replaces every panel and layout entry.
 - Use `-o yaml` when exporting a file intended for editing/import.
 
@@ -200,22 +224,23 @@ Use `apps canvas update` with auto-layout flags:
 Default agent behavior:
 - Auto layout is applied by default on `superplane apps canvas update` when no auto-layout flags are provided.
 - Use `--auto-layout` flags when you need explicit scope/seed-node control.
-- Include `--draft` on every update command in this environment.
+- Include `--draft-id` on every draft update command in this environment.
 
 ```bash
 # connected component around one seed node (recommended default for existing canvases)
-superplane apps canvas update <name-or-id> --draft \
+superplane apps canvas update --draft-id <draft-id> \
+  -f canvas.yaml \
   --auto-layout horizontal \
   --auto-layout-scope connected-component \
   --auto-layout-node <node-id>
 
 # full canvas (use sparingly; see policy below)
-superplane apps canvas update <name-or-id> --draft --auto-layout horizontal
+superplane apps canvas update --draft-id <draft-id> -f canvas.yaml --auto-layout horizontal
 ```
 
 Rules and behavior:
 - `--auto-layout` is required when using `--auto-layout-scope` or `--auto-layout-node`.
-- `--draft` is required on update commands in this environment.
+- `--draft-id` is required on draft update commands in this environment.
 - Supported algorithm: `horizontal`.
 - Supported scopes: `full-canvas`, `connected-component`.
 - Default scope behavior:
@@ -269,8 +294,8 @@ When a field type is `integration-resource` (like `repository` or `project`), th
 2. `superplane integrations get <id>` — inspect the connection
 3. Add `integration.id` to the node in the canvas YAML
 4. `superplane integrations list-resources --id <id> --type <type>` — find valid resource values
-5. `superplane apps canvas update <name-or-id> --draft --file canvas.yaml` — apply the fix
-6. `superplane apps canvas get <name>` — verify errors are cleared
+5. `superplane apps canvas update --draft-id <draft-id> -f canvas.yaml` — apply the fix
+6. `superplane apps canvas get <name-or-id> --draft-id <draft-id>` — verify errors are cleared
 
 ## When to Use Other Skills
 

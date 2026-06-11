@@ -36,10 +36,11 @@ superplane whoami
 
 If `whoami` fails because of authentication, DNS, timeout, or connection issues, the CLI is installed but the session is not usable yet. Tell the user to connect, fix the context, or allow network access as needed before debugging through the CLI.
 
-If debugging will require canvas edits, apply them as draft updates:
+If debugging will require canvas edits, resolve a draft id and apply updates with `--draft-id`:
 
 ```bash
-superplane apps canvas update <name-or-id> --draft --file canvas.yaml
+superplane apps drafts list <name-or-id>
+superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
 ```
 
 ## Debugging Workflow
@@ -93,7 +94,8 @@ For branching/channel issues, inspect `outputs` in execution YAML (not just top-
 Update the canvas, then trigger a new run from the UI or via a `start` (Manual Run) trigger with configured templates.
 
 ```bash
-superplane apps canvas update <name-or-id> --draft --file canvas.yaml
+superplane apps drafts list <name-or-id>
+superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
 ```
 
 ## Common Failure Patterns
