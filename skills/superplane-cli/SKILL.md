@@ -211,7 +211,6 @@ Behavior:
 - `get` without `--draft-id` reads the live console.
 - `get --draft-id` reads that draft's console YAML.
 - `set --draft-id` writes panels and layout to the specified draft version.
-- When change management is enabled, `set` may auto-create a change request unless you are targeting a draft-only workflow via explicit draft id (see CLI help).
 - Console import is replace-all: the YAML replaces every panel and layout entry.
 - Use `-o yaml` when exporting a file intended for editing/import.
 
