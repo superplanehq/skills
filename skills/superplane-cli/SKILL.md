@@ -50,8 +50,8 @@ Operate a SuperPlane instance through the `superplane` CLI.
 | Describe a trigger | `superplane index triggers --name github.onPush` |
 | List secrets | `superplane secrets list` |
 | Create secret | `superplane secrets create --file secret.yaml` |
-| List events | `superplane events list --app-id <id>` |
-| Trace event executions | `superplane events list-executions --app-id <id> --event-id <eid>` |
+| List runs | `superplane runs list --app-id <id>` |
+| Describe a run | `superplane runs describe <run-id> --app-id <id>` |
 | List node executions | `superplane executions list --app-id <id> --node-id <nid>` |
 | Cancel execution | `superplane executions cancel --app-id <id> --execution-id <eid>` |
 
@@ -266,8 +266,8 @@ superplane secrets delete <name_or_id>
 ### 5. Monitor Runs
 
 ```bash
-superplane events list --app-id <id>
-superplane events list-executions --app-id <id> --event-id <eid>
+superplane runs list --app-id <id>
+superplane runs describe <run-id> --app-id <id>
 ```
 
 ### 6. Troubleshooting Checklist

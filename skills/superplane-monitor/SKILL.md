@@ -11,8 +11,8 @@ Inspect, debug, and manage workflow executions.
 
 | Task | Command |
 | --- | --- |
-| List events for app | `superplane events list --app-id <id>` |
-| Trace an event's executions | `superplane events list-executions --app-id <id> --event-id <eid>` |
+| List runs for app | `superplane runs list --app-id <id>` |
+| Describe a run (node executions) | `superplane runs describe <run-id> --app-id <id>` |
 | List node executions | `superplane executions list --app-id <id> --node-id <nid>` |
 | Cancel execution | `superplane executions cancel --app-id <id> --execution-id <eid>` |
 | List queued items | `superplane queue list --app-id <id> --node-id <nid>` |
@@ -26,7 +26,7 @@ Before any debugging, confirm the CLI binary is available without requiring netw
 command -v superplane
 ```
 
-If this does not print a path: stop and tell the user to install the CLI from https://docs.superplane.com/installation/cli. Debugging requires the CLI to inspect events, executions, and queues.
+If this does not print a path: stop and tell the user to install the CLI from https://docs.superplane.com/installation/cli. Debugging requires the CLI to inspect runs, executions, and queues.
 
 Then verify the current session:
 
@@ -51,21 +51,21 @@ superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
 superplane apps list
 ```
 
-### 2. List Recent Events
+### 2. List Recent Runs
 
 ```bash
-superplane events list --app-id <app_id>
+superplane runs list --app-id <app_id>
 ```
 
-Each event is a trigger firing that starts a run.
+Each run is a trigger firing through the full canvas.
 
-### 3. Trace the Execution Chain
+### 3. Inspect the Run
 
 ```bash
-superplane events list-executions --app-id <app_id> --event-id <event_id>
+superplane runs describe <run_id> --app-id <app_id>
 ```
 
-Look for:
+Look for node executions that are:
 - **Failed** — the node that errored
 - **Pending/Running** — possibly stuck
 - **Skipped** — bypassed by a branch (If/Filter)
@@ -87,7 +87,7 @@ Use these real payloads to fix expression paths rather than guessing from docume
 For branching/channel issues, inspect `outputs` in execution YAML (not just top-level `result`):
 - A node can show `result: RESULT_PASSED` while routing onto a `failure` channel — these are independent (runtime health vs. semantic routing). See [Execution result vs. output channel](https://docs.superplane.com/concepts/data-flow#execution-result-vs-output-channel) before flagging this as a bug.
 - Confirm emitted channel names under `outputs` match edge wiring (`success`, `failed`, `default`, etc.)
-- If downstream behavior looks inconsistent with `events list-executions`, trust the node's `outputs` block for routing truth
+- If downstream behavior looks inconsistent with `runs describe`, trust the node's `outputs` block for routing truth
 
 ### 5. Fix and Re-run
 
