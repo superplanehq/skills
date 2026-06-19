@@ -179,19 +179,19 @@ canvas_cases = _tagged("superplane-app-builder", [
 ])
 
 
-# A fresh demo has no events/executions. Cases assert command *order* and content
+# A fresh demo has no runs/executions. Cases assert command *order* and content
 # of the diagnostic flow — the skill teaches a specific sequence
-# (events list → list-executions → executions list ...).
+# (runs list → runs describe → executions list ...).
 monitor_cases = _tagged("superplane-monitor", [
     Case(
         name="why_did_my_run_fail",
         inputs=(
             "A canvas called 'my-canvas' had a failed run. Use the CLI to trace what happened: "
-            "list recent events for the canvas and tell me what you see."
+            "list recent runs for the canvas and tell me what you see."
         ),
-        # `events list-executions` requires an actual event id; the demo has none, so we
+        # `runs describe` requires an actual run id; the demo has none, so we
         # only assert the first diagnostic step from the skill's debugging flow.
-        evaluators=(BashCommandCalled(r"superplane\s+events\s+list\b"),),
+        evaluators=(BashCommandCalled(r"superplane\s+runs\s+list\b"),),
     ),
     Case(
         name="stuck_execution",
