@@ -17,7 +17,8 @@ Translate workflow requirements into SuperPlane apps and their canvas YAML.
 | List triggers | `superplane index triggers --from <integration>` |
 | Generate starter YAML | `superplane apps canvas init` |
 | Create app from canvas YAML | `superplane apps create --canvas-file canvas.yaml` |
-| Update canvas | `superplane apps canvas update --draft-id <draft-id> -f canvas.yaml` |
+| Update canvas | `superplane apps canvas update -f canvas.yaml --message "..."` |
+| Stage and commit | `superplane apps staging update --file canvas.yaml` then `staging commit --message "..."` |
 
 ## Order of Operations
 
@@ -48,16 +49,16 @@ superplane whoami
 
 If connection details are not available, **stop** and ask the user to connect/provide the required URL and token. Do not continue without a working CLI session.
 
-### 1b. Apply Changes as Drafts
+### 1b. Apply Changes via Staging or Direct Commit
 
-Versioning is always on in this environment. Resolve a draft id, then pass `--draft-id` on every canvas and console draft command.
+App versions are immutable commits. Stage edits before committing, or pass `--message` to commit directly.
 
 ```bash
-superplane apps drafts list <name-or-id>
-# or when no draft exists yet:
-superplane apps drafts create <name-or-id>
+superplane apps staging update --file canvas.yaml
+superplane apps staging commit --message "Update canvas"
 
-superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
+# or commit in one step:
+superplane apps canvas update -f canvas.yaml --message "Update canvas"
 ```
 
 ### 2. Understand the Workflow
@@ -223,8 +224,10 @@ Then create an app from the file or update an existing app canvas:
 ```bash
 superplane apps create --canvas-file canvas.yaml
 # or update an existing canvas:
-superplane apps drafts list <name-or-id>   # or drafts create
-superplane apps canvas update --draft-id <draft-id> -f canvas.yaml
+superplane apps staging update --file canvas.yaml
+superplane apps staging commit --message "Update canvas"
+# or commit directly:
+superplane apps canvas update -f canvas.yaml --message "Update canvas"
 ```
 
 When creating a new app from canvas YAML, `apps create --canvas-file` already applies the graph in the file:
@@ -237,7 +240,7 @@ Workflow rules:
 - `superplane apps create --canvas-file canvas.yaml` accepts the resource-style Canvas YAML from the spec (`apiVersion`, `kind`, `metadata`, `spec`).
 - On `superplane apps create`, canvas layout flags are prefixed with `canvas-`: `--canvas-auto-layout`, `--canvas-auto-layout-scope`, and repeated `--canvas-auto-layout-node`.
 - Only run `superplane apps canvas update ...` after create when you are intentionally applying additional changes, such as a later file that includes `metadata.id`, or explicit auto-layout flags different from the defaults used by create.
-- Resolve a draft id with `apps drafts list` or `apps drafts create`, then include `--draft-id` on every draft canvas/console command.
+- Use `apps staging update` + `apps staging commit` for iterative edits, or `canvas update` / `console set` with `--message` to commit directly.
 
 Then verify:
 

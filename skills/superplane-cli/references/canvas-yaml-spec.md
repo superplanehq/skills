@@ -7,7 +7,7 @@ Export with `superplane apps canvas get <name>`, or author from scratch.
 > `superplane apps create --canvas-file canvas.yaml` creates an app and sends the canvas payload in one command.
 > On `superplane apps create`, layout flags are prefixed with `canvas-`: `--canvas-auto-layout`, `--canvas-auto-layout-scope`, and `--canvas-auto-layout-node`.
 > **Important:** `superplane apps canvas update --file canvas.yaml` requires `metadata.id` in that file. Right after `apps create --canvas-file`, prefer `superplane apps canvas update <name-or-id>` unless you first export and add `metadata.id`.
-> **Update rule:** resolve a draft id with `superplane apps drafts list` or `apps drafts create`, then pass `--draft-id <uuid>` on every `superplane apps canvas update` that targets a draft.
+> **Update rule:** stage changes with `superplane apps staging update --file canvas.yaml` and commit with `superplane apps staging commit --message "..."`, or commit directly with `superplane apps canvas update -f canvas.yaml --message "..."`.
 
 ## Structure
 
@@ -279,19 +279,20 @@ Use these flags with `superplane apps canvas update`:
 
 ```bash
 # Layout connected component around seed node(s) (recommended default for existing canvases)
-superplane apps canvas update --draft-id <draft-id> \
+superplane apps canvas update \
   -f canvas.yaml \
+  --message "Re-layout canvas" \
   --auto-layout horizontal \
   --auto-layout-scope connected-component \
   --auto-layout-node <node-id>
 
 # Full canvas layout (use sparingly; see policy below)
-superplane apps canvas update --draft-id <draft-id> -f canvas.yaml --auto-layout horizontal
+superplane apps canvas update -f canvas.yaml --message "Re-layout canvas" --auto-layout horizontal
 ```
 
 Behavior:
 - `--auto-layout` is required when using scope/node flags.
-- Include `--draft-id` on draft update commands in this environment.
+- `--message` is required on direct `canvas update` commands.
 - Auto layout is applied by default when no auto-layout flags are provided.
 - If scope is omitted:
   - no `--auto-layout-node` => full canvas
