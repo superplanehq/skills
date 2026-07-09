@@ -1,19 +1,8 @@
 # Console YAML Specification
 
-Export with `superplane apps console get <app-name-or-id> -o yaml`, edit locally, then apply with `superplane apps console set --draft-id <draft-id> -f console.yaml`.
+Export with `superplane apps console get <app-name-or-id> -o yaml`, edit locally, then apply with `superplane apps console set -f console.yaml --message "..."` or via staging.
 
 The CLI command group is `apps console`. The user-facing YAML kind is always `Console`.
-
-## Draft id
-
-Resolve the target draft before read/write:
-
-```bash
-superplane apps drafts list <name-or-id>
-superplane apps drafts create <name-or-id> [--name "..."]
-```
-
-Use the returned id as `--draft-id` on every console command below.
 
 ## Commands
 
@@ -24,30 +13,30 @@ superplane apps console get <name-or-id>
 # Export live console as canonical YAML
 superplane apps console get <name-or-id> -o yaml > console.yaml
 
-# Export a specific draft console
-superplane apps console get <name-or-id> --draft-id <draft-id> -o yaml > console.yaml
-
-# Replace a draft console from a file
-superplane apps console set --draft-id <draft-id> -f console.yaml
-superplane apps console set <name-or-id> --draft-id <draft-id> -f console.yaml
+# Replace the live console and commit immediately
+superplane apps console set -f console.yaml --message "Update console"
+superplane apps console set <name-or-id> -f console.yaml --message "Update console"
 
 # Read YAML from stdin
-superplane apps console set <name-or-id> --draft-id <draft-id> -f - < console.yaml
+superplane apps console set <name-or-id> -f - --message "Update console" < console.yaml
+
+# Stage console changes without committing immediately
+superplane apps staging update --file console.yaml
+superplane apps staging commit --message "Update console"
 ```
 
 If an app is active via `superplane apps active`, the app argument may be omitted:
 
 ```bash
-superplane apps drafts list
 superplane apps console get -o yaml > console.yaml
-superplane apps console set --draft-id <draft-id> -f console.yaml
+superplane apps console set -f console.yaml --message "Update console"
 ```
 
 ## Behavior
 
-- `get` without `--draft-id` reads the live console.
-- `get --draft-id` reads that draft's console and errors if the id is invalid or not a draft you own.
-- `set --draft-id` writes panels and layout to the specified draft version.
+- `get` reads the live (committed) console.
+- `set --message` writes panels and layout and commits immediately.
+- To stage console edits without committing, use `staging update --file console.yaml` then `staging commit`.
 - Import is replace-all: the submitted `spec.panels` and `spec.layout` replace all existing console panels and layout entries.
 - `metadata.canvasId` and `metadata.name` are informational on import.
 
